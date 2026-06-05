@@ -1,0 +1,213 @@
+-- Migration: Add notes to exercises and exercise_sets
+-- This allows coaches to add instructions for specific exercises and sets.
+
+ALTER TABLE public.exercises ADD COLUMN IF NOT EXISTS notes text;
+ALTER TABLE public.exercise_sets ADD COLUMN IF NOT EXISTS notes text;
+
+CREATE OR REPLACE FUNCTION insert_workout_with_children(
+  p_user_id uuid,
+  p_program text,
+  p_workout_type text,
+  p_date timestamp with time zone,
+  p_duration int,
+  p_feeling int,
+  p_notes text,
+  p_progression text,
+  p_progression_percentage text,
+  p_exercises jsonb,
+  p_deload_cycle smallint DEFAULT NULL,
+  p_cycle_weeks integer DEFAULT 1,
+  p_programmed_deloads integer[] DEFAULT '{}'
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_workout_id uuid;
+  v_exercise_item jsonb;
+  v_exercise_id uuid;
+  v_set_item jsonb;
+  v_set_idx int;
+  v_cycle_week int;
+BEGIN
+  -- 1. Insert Workout
+  INSERT INTO public.workouts (
+    user_id, program, workout_type, date, duration, feeling, notes,
+    progression, progression_percentage, deload_cycle, cycle_weeks, programmed_deloads
+  ) VALUES (
+    p_user_id, p_program, p_workout_type, p_date, p_duration, p_feeling, p_notes,
+    p_progression, p_progression_percentage, COALESCE(p_deload_cycle, 4),
+    COALESCE(p_cycle_weeks, 1), COALESCE(p_programmed_deloads, '{}')
+  )
+  RETURNING id INTO v_workout_id;
+
+  -- 2. Insert Exercises
+  IF jsonb_array_length(p_exercises) > 0 THEN
+    FOR v_exercise_item IN SELECT * FROM jsonb_array_elements(p_exercises)
+    LOOP
+      INSERT INTO public.exercises (
+        workout_id, name, category, order_index, notes
+      ) VALUES (
+        v_workout_id,
+        v_exercise_item->>'name',
+        v_exercise_item->>'category',
+        COALESCE((v_exercise_item->>'order_index')::int, 0),
+        v_exercise_item->>'notes'
+      )
+      RETURNING id INTO v_exercise_id;
+
+      -- 3. Insert Sets (with cycle_week support)
+      IF v_exercise_item->'sets' IS NOT NULL AND jsonb_array_length(v_exercise_item->'sets') > 0 THEN
+        FOR v_set_item IN SELECT * FROM jsonb_array_elements(v_exercise_item->'sets')
+        LOOP
+          v_cycle_week := COALESCE((v_set_item->>'cycle_week')::int, 1);
+
+          -- Calculate set_index per cycle_week
+          SELECT COALESCE(MAX(es.set_index), -1) + 1 INTO v_set_idx
+          FROM public.exercise_sets es
+          WHERE es.exercise_id = v_exercise_id AND es.cycle_week = v_cycle_week;
+
+          INSERT INTO public.exercise_sets (
+            exercise_id, sets, reps, weight, rest_time, rpe,
+            is_bodyweight, target_type, set_index, cycle_week, notes
+          ) VALUES (
+            v_exercise_id,
+            (v_set_item->>'sets')::int,
+            (v_set_item->>'reps')::int,
+            (v_set_item->>'weight')::numeric,
+            COALESCE((v_set_item->>'rest_time')::int, (v_set_item->>'restTime')::int, 60),
+            (v_set_item->>'rpe')::numeric,
+            COALESCE((v_set_item->>'isBodyweight')::boolean, (v_set_item->>'weight')::numeric = 0),
+            v_set_item->>'target_type',
+            v_set_idx,
+            v_cycle_week,
+            v_set_item->>'notes'
+          );
+        END LOOP;
+      END IF;
+    END LOOP;
+  END IF;
+
+  RETURN jsonb_build_object('success', true, 'workout_id', v_workout_id);
+EXCEPTION WHEN OTHERS THEN
+  RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION upsert_workout_details(
+  p_workout_id uuid,
+  p_program text,
+  p_workout_type text,
+  p_notes text,
+  p_exercises jsonb,
+  p_deload_cycle smallint DEFAULT NULL,
+  p_cycle_weeks integer DEFAULT NULL,
+  p_programmed_deloads integer[] DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_exercise_item jsonb;
+  v_set_item jsonb;
+  v_exercise_id uuid;
+  v_exercise_ids uuid[];
+  v_cycle_week int;
+  v_set_idx int;
+BEGIN
+  -- 1. Update Workout Details
+  UPDATE public.workouts
+  SET
+    program = p_program,
+    workout_type = p_workout_type,
+    notes = p_notes,
+    deload_cycle = COALESCE(p_deload_cycle, deload_cycle),
+    cycle_weeks = COALESCE(p_cycle_weeks, cycle_weeks),
+    programmed_deloads = COALESCE(p_programmed_deloads, programmed_deloads)
+  WHERE id = p_workout_id;
+
+  -- 2. Process Exercises
+  v_exercise_ids := array[]::uuid[];
+
+  IF jsonb_array_length(p_exercises) > 0 THEN
+    FOR v_exercise_item IN SELECT * FROM jsonb_array_elements(p_exercises)
+    LOOP
+      v_exercise_id := null;
+      BEGIN
+        v_exercise_id := (v_exercise_item->>'id')::uuid;
+        PERFORM 1 FROM public.exercises WHERE id = v_exercise_id AND workout_id = p_workout_id;
+        IF NOT FOUND THEN
+          v_exercise_id := null;
+        END IF;
+      EXCEPTION WHEN OTHERS THEN
+        v_exercise_id := null;
+      END;
+
+      IF v_exercise_id IS NOT NULL THEN
+        UPDATE public.exercises
+        SET
+          name = v_exercise_item->>'name',
+          category = v_exercise_item->>'category',
+          order_index = (v_exercise_item->>'order_index')::int,
+          notes = v_exercise_item->>'notes'
+        WHERE id = v_exercise_id;
+      ELSE
+        INSERT INTO public.exercises (
+          workout_id, name, category, order_index, notes
+        ) VALUES (
+          p_workout_id,
+          v_exercise_item->>'name',
+          v_exercise_item->>'category',
+          (v_exercise_item->>'order_index')::int,
+          v_exercise_item->>'notes'
+        )
+        RETURNING id INTO v_exercise_id;
+      END IF;
+
+      v_exercise_ids := array_append(v_exercise_ids, v_exercise_id);
+
+      -- Delete old sets for this exercise and re-insert
+      DELETE FROM public.exercise_sets WHERE exercise_id = v_exercise_id;
+
+      IF v_exercise_item->'sets' IS NOT NULL AND jsonb_array_length(v_exercise_item->'sets') > 0 THEN
+        FOR v_set_item IN SELECT * FROM jsonb_array_elements(v_exercise_item->'sets')
+        LOOP
+          v_cycle_week := COALESCE((v_set_item->>'cycle_week')::int, 1);
+
+          -- Calculate set_index per cycle_week for this exercise
+          SELECT COALESCE(MAX(es.set_index), -1) + 1 INTO v_set_idx
+          FROM public.exercise_sets es
+          WHERE es.exercise_id = v_exercise_id AND es.cycle_week = v_cycle_week;
+
+          INSERT INTO public.exercise_sets (
+            exercise_id, sets, reps, weight, rest_time, rpe,
+            is_bodyweight, target_type, set_index, cycle_week, notes
+          ) VALUES (
+            v_exercise_id,
+            (v_set_item->>'sets')::int,
+            (v_set_item->>'reps')::int,
+            (v_set_item->>'weight')::numeric,
+            COALESCE((v_set_item->>'rest_time')::int, (v_set_item->>'restTime')::int, 60),
+            (v_set_item->>'rpe')::numeric,
+            COALESCE((v_set_item->>'isBodyweight')::boolean, (v_set_item->>'weight')::numeric = 0),
+            v_set_item->>'target_type',
+            v_set_idx,
+            v_cycle_week,
+            v_set_item->>'notes'
+          );
+        END LOOP;
+      END IF;
+
+    END LOOP;
+  END IF;
+
+  DELETE FROM public.exercises
+  WHERE workout_id = p_workout_id
+  AND id != ALL(v_exercise_ids);
+
+  RETURN jsonb_build_object('success', true);
+EXCEPTION WHEN OTHERS THEN
+  RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+END;
+$$;
