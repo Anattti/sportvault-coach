@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import PulsingLogo from '@/components/loading/PulsingLogo';
 import { createClient } from '@/lib/supabase/client';
+import { getSiteUrl } from '@/lib/site-url';
 import {
   Dialog,
   DialogContent,
@@ -22,9 +23,25 @@ interface AuthFormProps {
   defaultTab?: "login" | "register";
 }
 
+function formatAuthError(err: unknown, fallback: string): string {
+  if (err instanceof Error) {
+    if (err.message.includes('No API key found') || err.message.includes('ympäristömuuttujat')) {
+      return 'Supabase API -avain puuttuu. Aseta NEXT_PUBLIC_SUPABASE_URL ja NEXT_PUBLIC_SUPABASE_ANON_KEY.';
+    }
+    return err.message;
+  }
+  return fallback;
+}
+
 export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = React.useMemo(() => {
+    try {
+      return createClient();
+    } catch {
+      return null;
+    }
+  }, []);
   
   const [activeTab, setActiveTab] = React.useState<"login" | "register">(defaultTab)
   
@@ -44,6 +61,17 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
 
   const isRegistering = activeTab === "register"
 
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get('error');
+
+    if (authError === 'missing_supabase_env') {
+      setError('Sovelluksen Supabase-asetukset puuttuvat. Tarkista ympäristömuuttujat.');
+    } else if (authError === 'auth_callback_error' || authError === 'auth_confirm_error') {
+      setError('Kirjautumislinkki vanhentui tai on virheellinen. Pyydä uusi palautuslinkki.');
+    }
+  }, []);
+
   const handleTabChange = (tab: "login" | "register") => {
     setActiveTab(tab);
     setError(null);
@@ -57,8 +85,14 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
     setResetLoading(true);
 
     try {
-      const redirectTo = `${window.location.origin}/auth/callback?next=/reset-password`;
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      if (!supabase) {
+        throw new Error('Supabase-ympäristömuuttujat puuttuvat');
+      }
+
+      const normalizedEmail = resetEmail.trim().toLowerCase();
+      const siteUrl = getSiteUrl();
+      const redirectTo = `${siteUrl}/auth/callback?next=/reset-password`;
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
         redirectTo,
       });
 
@@ -68,7 +102,7 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
 
       setResetSuccess(true);
     } catch (err) {
-      setResetError(err instanceof Error ? err.message : 'Salasanan palautus epäonnistui');
+      setResetError(formatAuthError(err, 'Salasanan palautus epäonnistui'));
     } finally {
       setResetLoading(false);
     }
@@ -87,6 +121,10 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
     setIsLoading(true);
 
     try {
+      if (!supabase) {
+        throw new Error('Supabase-ympäristömuuttujat puuttuvat');
+      }
+
       if (isRegistering) {
         const { error: signUpError } = await supabase.auth.signUp({
           email,
@@ -117,7 +155,7 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
         router.push('/');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Tapahtui virhe');
+      setError(formatAuthError(err, 'Tapahtui virhe'));
     } finally {
       setIsLoading(false);
     }
@@ -331,8 +369,14 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
           {resetSuccess ? (
             <div className="space-y-4">
               <p className="text-sm text-[#00FF41]">
-                Palautuslinkki on lähetetty osoitteeseen <strong>{resetEmail}</strong>. Tarkista sähköpostisi.
+                Jos tilillä on sähköposti <strong>{resetEmail.trim().toLowerCase()}</strong>, palautuslinkki on lähetetty.
               </p>
+              <ul className="text-sm text-white/50 space-y-1 list-disc list-inside">
+                <li>Tarkista roskaposti ja mainokset-kansio</li>
+                <li>iCloud Hide My Email -osoitteet voivat viivästyttää viestiä</li>
+                <li>Lähettäjä: noreply@mail.app.supabase.io</li>
+                <li>Viesti voi kestää muutaman minuutin</li>
+              </ul>
               <Button
                 type="button"
                 className="w-full bg-[#00FF41] hover:bg-[#00FF41]/90 text-black font-bold"
