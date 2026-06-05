@@ -13,7 +13,13 @@ import { createClient } from '@/lib/supabase/client';
 
 export function ResetPasswordForm() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = React.useMemo(() => {
+    try {
+      return createClient();
+    } catch {
+      return null;
+    }
+  }, []);
 
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -37,6 +43,10 @@ export function ResetPasswordForm() {
     setIsLoading(true);
 
     try {
+      if (!supabase) {
+        throw new Error('Supabase-ympäristömuuttujat puuttuvat');
+      }
+
       const { error: updateError } = await supabase.auth.updateUser({ password });
 
       if (updateError) {
@@ -45,7 +55,12 @@ export function ResetPasswordForm() {
 
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Salasanan päivitys epäonnistui');
+      const message = err instanceof Error ? err.message : 'Salasanan päivitys epäonnistui';
+      setError(
+        message.includes('No API key found') || message.includes('ympäristömuuttujat')
+          ? 'Supabase API -avain puuttuu. Aseta NEXT_PUBLIC_SUPABASE_URL ja NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+          : message
+      );
     } finally {
       setIsLoading(false);
     }
