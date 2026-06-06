@@ -16,9 +16,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { createClient } from '@/lib/supabase/client';
 import MobileSidebar from './MobileSidebar';
+import NotificationBell from './NotificationBell';
 import { useEffect, useState } from 'react';
+import { WorkoutNotification } from '@/types';
 
-export default function Topbar() {
+export default function Topbar({ notifications }: { notifications: WorkoutNotification[] }) {
   const router = useRouter();
   const supabase = createClient();
   const [email, setEmail] = useState<string | null>(null);
@@ -55,7 +57,8 @@ export default function Topbar() {
       </div>
 
       {/* Topbar actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        <NotificationBell notifications={notifications} />
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="ghost" className="relative h-8 w-8 rounded-full" />}>
             <Avatar className="h-8 w-8 border border-border">

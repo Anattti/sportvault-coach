@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import AssignProgramDialog from '@/components/programs/AssignProgramDialog';
-import DeleteClientProgramButton from '@/components/programs/DeleteClientProgramButton';
-import { Pencil, Plus } from 'lucide-react';
+import ClientProgramCard from '@/components/programs/ClientProgramCard';
+import { ClipboardList, Plus } from 'lucide-react';
 
 export default async function ClientProgramsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -45,7 +44,12 @@ export default async function ClientProgramsPage({ params }: { params: Promise<{
           <p className="text-muted-foreground">Urheilijan aktiiviset ja menneet ohjelmat.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="default" className="font-semibold" render={<Link href={`/clients/${clientId}/programs/new`} />} nativeButton={false}>
+          <Button
+            variant="default"
+            className="font-semibold shadow-neon-sm"
+            render={<Link href={`/clients/${clientId}/programs/new`} />}
+            nativeButton={false}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Luo uusi treeni
           </Button>
@@ -58,46 +62,47 @@ export default async function ClientProgramsPage({ params }: { params: Promise<{
       </div>
 
       {!clientPrograms || clientPrograms.length === 0 ? (
-        <Card className="bg-card border-border">
-          <CardContent className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-            <p>Urheilijalla ei ole vielä yhtään ohjelmaa.</p>
-            <Button className="mt-4" render={<Link href={`/clients/${clientId}/programs/new`} />} nativeButton={false}>
-              Luo ensimmäinen treeni
-            </Button>
+        <Card className="glass-panel border-white/8">
+          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/25 shadow-neon-sm">
+              <ClipboardList className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">Ei ohjelmia vielä</h3>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+              Luo uusi treeni tai anna valmiista pohjasta urheilijalle ensimmäinen ohjelma.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              <Button
+                className="font-semibold shadow-neon-sm"
+                render={<Link href={`/clients/${clientId}/programs/new`} />}
+                nativeButton={false}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Luo ensimmäinen treeni
+              </Button>
+              <AssignProgramDialog
+                clientId={clientId}
+                coachId={user.id}
+                coachTemplates={coachTemplates || []}
+              />
+            </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-5 md:grid-cols-2">
           {clientPrograms.map((prog) => (
-            <Card key={prog.id} className="bg-card border-border flex flex-col">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-xl truncate pr-2">{prog.program}</CardTitle>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <Badge variant="outline" className="uppercase text-[10px] tracking-wider border-accent text-accent">
-                      {prog.workout_type}
-                    </Badge>
-                    {prog.managed_by_coach && (
-                      <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30">
-                        Valmentajan
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pb-4 flex-1">
-                <p className="text-sm text-muted-foreground">
-                  Sykliviikot: {prog.cycle_weeks}
-                </p>
-              </CardContent>
-              <CardFooter className="flex gap-2 pt-0">
-                <Button variant="outline" size="sm" className="flex-1" render={<Link href={`/clients/${clientId}/programs/${prog.id}/edit`} />} nativeButton={false}>
-                  <Pencil className="mr-2 h-3 w-3" />
-                  Muokkaa
-                </Button>
-                <DeleteClientProgramButton workoutId={prog.id} clientId={clientId} />
-              </CardFooter>
-            </Card>
+            <ClientProgramCard
+              key={prog.id}
+              id={prog.id}
+              clientId={clientId}
+              program={prog.program}
+              workoutType={prog.workout_type}
+              duration={prog.duration}
+              cycleWeeks={prog.cycle_weeks}
+              exerciseCount={prog.exercises?.[0]?.count ?? 0}
+              managedByCoach={prog.managed_by_coach ?? false}
+              createdAt={prog.created_at}
+            />
           ))}
         </div>
       )}

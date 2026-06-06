@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import SessionDetail from '@/components/sessions/SessionDetail';
 import CoachNoteEditor from '@/components/sessions/CoachNoteEditor';
 import { SessionDetail as SessionDetailType, WarmupData, CooldownData } from '@/types';
+import { calculateE1RM } from '@/lib/analytics';
+import { mapToAnalyticsSessions } from '@/lib/client-analytics/progress';
 import { format } from 'date-fns';
 
 export default async function SingleSessionPage({ 
@@ -44,6 +46,64 @@ export default async function SingleSessionPage({
 
   if (sessionError || !sessionData) {
     notFound();
+  }
+
+  const { data: priorSessions } = await supabase
+    .from('workout_sessions')
+    .select(`
+      id,
+      date,
+      session_exercises (
+        name,
+        session_sets ( weight_used, reps_completed )
+      )
+    `)
+    .eq('user_id', clientId)
+    .lt('date', sessionData.date ?? new Date().toISOString())
+    .order('date', { ascending: true });
+
+  const priorAnalytics = mapToAnalyticsSessions(
+    (priorSessions ?? []).map((s) => ({
+      id: s.id,
+      user_id: clientId,
+      workout_id: null,
+      date: s.date,
+      duration: null,
+      total_volume: null,
+      rpe_average: null,
+      cycle_week: null,
+      is_deload: null,
+      session_exercises: (s.session_exercises ?? []).map((ex) => ({
+        id: '',
+        name: ex.name,
+        exercise_id: null,
+        is_ad_hoc: null,
+        is_swapped: null,
+        session_sets: (ex.session_sets ?? []).map((set) => ({
+          weight_used: set.weight_used,
+          reps_completed: set.reps_completed,
+          rpe: null,
+        })),
+      })),
+    })),
+  );
+
+  const previousBestByExercise: Record<string, number> = {};
+  for (const session of priorAnalytics) {
+    for (const exercise of session.exercises) {
+      const maxE1RM = Math.max(
+        0,
+        ...exercise.sets.map((set) =>
+          calculateE1RM(set.weight_used, set.reps_completed),
+        ),
+      );
+      if (maxE1RM > 0) {
+        previousBestByExercise[exercise.name] = Math.max(
+          previousBestByExercise[exercise.name] ?? 0,
+          maxE1RM,
+        );
+      }
+    }
   }
 
   // Hae liikkeet ja sarjat
@@ -142,7 +202,7 @@ export default async function SingleSessionPage({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_400px] items-start">
         <div className="order-2 lg:order-1">
-          <SessionDetail data={formattedData} />
+          <SessionDetail data={formattedData} previousBestByExercise={previousBestByExercise} />
         </div>
         <div className="order-1 lg:order-2 sticky top-6">
           <CoachNoteEditor 

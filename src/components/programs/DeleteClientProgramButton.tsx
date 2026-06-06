@@ -45,7 +45,8 @@ export default function DeleteClientProgramButton({
       size="sm"
       onClick={handleDelete}
       disabled={loading}
-      className="text-muted-foreground hover:text-destructive"
+      className="h-8 w-8 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+      aria-label="Poista ohjelma"
     >
       {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
     </Button>

@@ -23,8 +23,163 @@ export interface ClientOverview {
   lastSessionDate: string | null;
   totalSessionsThisWeek: number;
   totalVolumeThisWeek: number;
+  volumeChangePercent: number | null;
   avgRpe: number | null;
+  rpeElevated: boolean;
+  trainedThisWeek: boolean;
+  cycleWeek: number | null;
+  cycleWeeks: number | null;
+  programName: string | null;
+  activeProgramName: string | null;
+  hasAssignedProgram: boolean;
+  plannedSessionsThisWeek: number | null;
+  compliancePercent: number | null;
+  programStuck: boolean;
+  topExerciseName: string | null;
+  topExerciseE1RM: number | null;
+  topExerciseTrend: 'up' | 'down' | 'stable' | null;
   status: 'active' | 'inactive'; // inactive = ei treenannut 7+ päivään
+}
+
+export interface PersonalRecord {
+  clientId: string;
+  clientNickname: string;
+  exerciseName: string;
+  e1rm: number;
+  previousBest: number;
+  improvementPercent: number;
+  sessionId: string;
+  date: string;
+}
+
+export interface ClientPersonalRecord {
+  exerciseName: string;
+  e1rm: number;
+  previousBest: number;
+  improvementPercent: number;
+  sessionId: string;
+  date: string;
+}
+
+export interface ExerciseProgressRow {
+  exerciseName: string;
+  sessionCount: number;
+  currentE1RM: number;
+  bestE1RM: number;
+  changePercent: number | null;
+  trend: 'up' | 'down' | 'stable';
+  history: Array<{ date: string; value: number }>;
+}
+
+export interface DevelopmentSummary {
+  strengthChangePercent: number | null;
+  volumeChangePercent: number | null;
+  prCount: number;
+  compliancePercent: number | null;
+  interpretation: string;
+  strengthTrend: 'up' | 'down' | 'neutral';
+  volumeTrend: 'up' | 'down' | 'neutral';
+}
+
+export interface ComplianceWeek {
+  label: string;
+  planned: number;
+  completed: number;
+  compliancePercent: number | null;
+  isCurrentWeek: boolean;
+}
+
+export interface CycleProgressPoint {
+  date: string;
+  cycleWeek: number;
+  workoutId: string | null;
+  programStuck: boolean;
+}
+
+export interface AdherenceSummary {
+  setCompletionPercent: number | null;
+  avgWeightDeviationPercent: number | null;
+  avgRepsDeviation: number | null;
+  avgRpeDeviation: number | null;
+  swapPercent: number | null;
+  adHocPercent: number | null;
+  sessionsAnalyzed: number;
+}
+
+export interface LoadMetrics {
+  acwr: number | null;
+  acwrWarning: boolean;
+  weeklyVolume: WeeklyMetricPoint[];
+  weeklySessions: WeeklyMetricPoint[];
+  weeklyRpe: WeeklyMetricPoint[];
+  volumeSpike: VolumeSpikeAlert | null;
+  avgIntensity: number | null;
+}
+
+export interface ClientAnalyticsData {
+  periodWeeks: number;
+  hasSessions: boolean;
+  primaryWorkoutType: string | null;
+  summary: DevelopmentSummary;
+  exerciseProgress: ExerciseProgressRow[];
+  personalRecords: ClientPersonalRecord[];
+  load: LoadMetrics;
+  complianceHistory: ComplianceWeek[];
+  cycleProgress: CycleProgressPoint[];
+  trainingStreakWeeks: number;
+  programStuck: boolean;
+  adherence: AdherenceSummary;
+}
+
+export interface AttentionClient {
+  clientId: string;
+  nickname: string;
+  reason:
+    | 'inactive'
+    | 'pending'
+    | 'no_sessions'
+    | 'high_rpe'
+    | 'volume_spike'
+    | 'no_program'
+    | 'program_stuck';
+  lastSessionDate: string | null;
+  daysInactive: number | null;
+  detail?: string;
+}
+
+export interface CoachActivitySession extends SessionSummary {
+  clientId: string;
+  clientNickname: string;
+  isNew?: boolean;
+}
+
+export interface WorkoutNotification {
+  id: string;
+  clientId: string;
+  clientNickname: string;
+  workoutName: string | null;
+  date: string;
+  totalVolume: number;
+  createdAt: string;
+}
+
+export interface WeeklyVolumePoint {
+  label: string;
+  volume: number;
+  isCurrentWeek: boolean;
+}
+
+export interface WeeklyMetricPoint {
+  label: string;
+  value: number;
+  isCurrentWeek: boolean;
+}
+
+export interface VolumeSpikeAlert {
+  hasSpike: boolean;
+  percentChange: number;
+  currentVolume: number;
+  avgVolume: number;
 }
 
 // Treenisession yhteenveto (listanäkymä)

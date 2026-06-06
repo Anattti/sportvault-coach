@@ -6,7 +6,11 @@ import { User, Activity, Calendar, BarChart3, ChevronLeft } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import {
+  getClientTabIconClassName,
+  getClientTabLinkClassName,
+  isClientTabActive,
+} from '@/config/navigation';
 import { CoachClient } from '@/types';
 import ClientNotesDialog from '@/components/clients/ClientNotesDialog';
 import ClientStatusMenu from '@/components/clients/ClientStatusMenu';
@@ -87,36 +91,22 @@ export default function ClientProfileHeader({ client }: ClientProfileHeaderProps
         </div>
       </div>
 
-      <div className="border-b border-border">
-        <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
-          {tabs.map((tab) => {
-            const isActive = pathname === tab.href ||
-                             (tab.href !== baseUrl && pathname?.startsWith(tab.href));
+      <nav className="flex gap-1 overflow-x-auto pb-1" aria-label="Tabs">
+        {tabs.map((tab) => {
+          const isActive = isClientTabActive(pathname, tab.href, baseUrl);
 
-            return (
-              <Link
-                key={tab.name}
-                href={tab.href}
-                className={cn(
-                  isActive
-                    ? 'border-accent text-accent'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-                  'group inline-flex items-center border-b-2 py-4 px-1 text-sm font-medium whitespace-nowrap transition-colors'
-                )}
-              >
-                <tab.icon
-                  className={cn(
-                    isActive ? 'text-accent' : 'text-muted-foreground group-hover:text-foreground',
-                    '-ml-0.5 mr-2 h-5 w-5'
-                  )}
-                  aria-hidden="true"
-                />
-                {tab.name}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+          return (
+            <Link
+              key={tab.name}
+              href={tab.href}
+              className={getClientTabLinkClassName(isActive)}
+            >
+              <tab.icon className={getClientTabIconClassName(isActive)} aria-hidden="true" />
+              {tab.name}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }
