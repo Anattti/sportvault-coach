@@ -11,12 +11,15 @@ import {
   getClientTabLinkClassName,
   isClientTabActive,
 } from '@/config/navigation';
+import CycleWeekIndicator from '@/components/programs/CycleWeekIndicator';
+import { ProgramCycleStatus } from '@/lib/programs/cycle-status';
 import { CoachClient } from '@/types';
 import ClientNotesDialog from '@/components/clients/ClientNotesDialog';
 import ClientStatusMenu from '@/components/clients/ClientStatusMenu';
 
 interface ClientProfileHeaderProps {
   client: CoachClient;
+  cycleStatus: ProgramCycleStatus;
 }
 
 const statusLabels: Record<string, string> = {
@@ -26,7 +29,7 @@ const statusLabels: Record<string, string> = {
   ended: 'Päättynyt',
 };
 
-export default function ClientProfileHeader({ client }: ClientProfileHeaderProps) {
+export default function ClientProfileHeader({ client, cycleStatus }: ClientProfileHeaderProps) {
   const pathname = usePathname();
   const baseUrl = `/clients/${client.client_id}`;
 
@@ -75,6 +78,21 @@ export default function ClientProfileHeader({ client }: ClientProfileHeaderProps
                 <span>{profile.height} cm</span>
               )}
             </div>
+            {cycleStatus.hasCycle && cycleStatus.currentWeek != null && cycleStatus.totalWeeks != null && (
+              <div className="mt-4">
+                {cycleStatus.programName && (
+                  <p className="mb-2 text-sm font-medium text-foreground truncate">
+                    {cycleStatus.programName}
+                  </p>
+                )}
+                <CycleWeekIndicator
+                  currentWeek={cycleStatus.currentWeek}
+                  totalWeeks={cycleStatus.totalWeeks}
+                  programmedDeloads={cycleStatus.programmedDeloads}
+                  programStuck={cycleStatus.programStuck}
+                />
+              </div>
+            )}
           </div>
         </div>
 

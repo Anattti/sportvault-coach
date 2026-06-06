@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { fi } from 'date-fns/locale';
 import { AlertTriangle, ArrowRight, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import { ClientOverview } from '@/types';
+import CycleWeekIndicator from '@/components/programs/CycleWeekIndicator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -100,13 +101,8 @@ export default function ClientSummaryTable({ clients }: ClientSummaryTableProps)
                 <TableCell className="text-right">
                   <E1RMCell client={client} />
                 </TableCell>
-                <TableCell className="text-right text-muted-foreground text-xs">
-                  {client.cycleWeek != null && client.cycleWeeks != null
-                    ? `Vk ${client.cycleWeek}/${client.cycleWeeks}`
-                    : client.activeProgramName ?? client.programName ?? '—'}
-                  {client.programStuck && (
-                    <AlertTriangle className="ml-1 inline h-3 w-3 text-purple-400" aria-label="Ohjelma jumissa" />
-                  )}
+                <TableCell className="text-right">
+                  <ProgramCell client={client} />
                 </TableCell>
                 <TableCell className="pr-4 text-right">
                   <StatusBadge status={client.status} trained={client.trainedThisWeek} />
@@ -117,6 +113,44 @@ export default function ClientSummaryTable({ clients }: ClientSummaryTableProps)
         </Table>
       </CardContent>
     </Card>
+  );
+}
+
+function ProgramCell({ client }: { client: ClientOverview }) {
+  if (
+    client.hasCycle &&
+    client.cycleWeek != null &&
+    client.cycleWeeks != null
+  ) {
+    return (
+      <div className="ml-auto flex flex-col items-end gap-1">
+        <CycleWeekIndicator
+          currentWeek={client.cycleWeek}
+          totalWeeks={client.cycleWeeks}
+          programmedDeloads={client.programmedDeloads}
+          programStuck={client.programStuck}
+          variant="compact"
+          align="right"
+        />
+        {(client.activeProgramName ?? client.programName) && (
+          <p
+            className="max-w-[140px] truncate text-[10px] text-muted-foreground"
+            title={client.activeProgramName ?? client.programName ?? undefined}
+          >
+            {client.activeProgramName ?? client.programName}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <span className="text-xs text-muted-foreground">
+      {client.activeProgramName ?? client.programName ?? '—'}
+      {client.programStuck && (
+        <AlertTriangle className="ml-1 inline h-3 w-3 text-purple-400" aria-label="Ohjelma jumissa" />
+      )}
+    </span>
   );
 }
 

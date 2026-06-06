@@ -5,6 +5,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import AssignProgramDialog from '@/components/programs/AssignProgramDialog';
 import ClientProgramCard from '@/components/programs/ClientProgramCard';
 import { ClipboardList, Plus } from 'lucide-react';
+import {
+  buildUpdaterNicknameMap,
+  collectWorkoutEditorIds,
+} from '@/lib/workouts/update-meta';
 
 export default async function ClientProgramsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -24,10 +28,20 @@ export default async function ClientProgramsPage({ params }: { params: Promise<{
       cycle_weeks,
       managed_by_coach,
       created_at,
+      updated_at,
+      updated_by,
+      user_id,
       exercises ( count )
     `)
     .eq('user_id', clientId)
     .order('created_at', { ascending: false });
+
+  const programRows = clientPrograms ?? [];
+  const editorIds = collectWorkoutEditorIds(programRows);
+  const { data: editorProfiles } = editorIds.length
+    ? await supabase.from('user_profiles').select('id, nickname').in('id', editorIds)
+    : { data: [] };
+  const updaterNicknames = buildUpdaterNicknameMap(editorProfiles);
 
   const { data: coachTemplates } = await supabase
     .from('workouts')
@@ -61,7 +75,7 @@ export default async function ClientProgramsPage({ params }: { params: Promise<{
         </div>
       </div>
 
-      {!clientPrograms || clientPrograms.length === 0 ? (
+      {programRows.length === 0 ? (
         <Card className="glass-panel border-white/8">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/25 shadow-neon-sm">
@@ -90,7 +104,7 @@ export default async function ClientProgramsPage({ params }: { params: Promise<{
         </Card>
       ) : (
         <div className="grid gap-5 md:grid-cols-2">
-          {clientPrograms.map((prog) => (
+          {programRows.map((prog) => (
             <ClientProgramCard
               key={prog.id}
               id={prog.id}
@@ -101,7 +115,11 @@ export default async function ClientProgramsPage({ params }: { params: Promise<{
               cycleWeeks={prog.cycle_weeks}
               exerciseCount={prog.exercises?.[0]?.count ?? 0}
               managedByCoach={prog.managed_by_coach ?? false}
-              createdAt={prog.created_at}
+              updatedAt={prog.updated_at ?? prog.created_at}
+              updatedBy={prog.updated_by}
+              ownerId={prog.user_id}
+              updaterNickname={updaterNicknames[prog.updated_by ?? prog.user_id]}
+              viewerId={user.id}
             />
           ))}
         </div>

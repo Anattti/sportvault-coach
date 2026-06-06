@@ -8,10 +8,13 @@ import {
   getCurrentWeekBounds,
   getPlannedSessionsThisWeek,
   isDateInCurrentWeek,
-  isProgramStuck,
   SessionForCompliance,
 } from '@/lib/dashboard/compliance';
 import { analyzeProgressData } from '@/lib/dashboard/progress';
+import {
+  resolveActiveProgramMeta,
+  resolveCycleStatus,
+} from '@/lib/programs/cycle-status';
 import {
   buildWeeklyMetrics,
   computePercentChange,
@@ -86,6 +89,7 @@ type SessionRow = {
     program: string | null;
     workout_type: string | null;
     cycle_weeks: number | null;
+    programmed_deloads: number[] | null;
   } | null;
 };
 
@@ -107,6 +111,16 @@ function buildClientOverview(
   nickname: string,
   clientSessions: SessionRow[],
   programContext: ClientProgramContext,
+  assignmentWorkout: {
+    program: string | null;
+    cycle_weeks: number | null;
+    programmed_deloads: number[] | null;
+  } | null,
+  managedWorkout: {
+    program: string | null;
+    cycle_weeks: number | null;
+    programmed_deloads: number[] | null;
+  } | null,
   weekStart: Date,
   prevWeekStart: Date,
   prevWeekEnd: Date,
@@ -158,6 +172,13 @@ function buildClientOverview(
     workout_id: s.workout_id,
   }));
 
+  const programMeta = resolveActiveProgramMeta(
+    assignmentWorkout,
+    managedWorkout,
+    lastSession?.workouts ?? null,
+  );
+  const cycleStatus = resolveCycleStatus(complianceSessions, programMeta);
+
   return {
     clientId,
     nickname,
@@ -171,14 +192,17 @@ function buildClientOverview(
         : null,
     rpeElevated: isRpeElevated(sorted),
     trainedThisWeek: weekSessions.length > 0,
-    cycleWeek: lastSession?.cycle_week ?? null,
-    cycleWeeks: lastSession?.workouts?.cycle_weeks ?? null,
+    cycleWeek: cycleStatus.currentWeek,
+    cycleWeeks: cycleStatus.totalWeeks,
+    programmedDeloads: cycleStatus.programmedDeloads,
+    isDeloadWeek: cycleStatus.isDeloadWeek,
+    hasCycle: cycleStatus.hasCycle,
     programName: lastSession?.workouts?.program ?? programContext.activeProgramName,
-    activeProgramName: programContext.activeProgramName,
+    activeProgramName: programContext.activeProgramName ?? cycleStatus.programName,
     hasAssignedProgram: programContext.hasAssignedProgram,
     plannedSessionsThisWeek,
     compliancePercent,
-    programStuck: isProgramStuck(complianceSessions),
+    programStuck: cycleStatus.programStuck,
     topExerciseName: null,
     topExerciseE1RM: null,
     topExerciseTrend: null,
@@ -282,6 +306,22 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     string,
     { exerciseName: string; currentE1RM: number; trend: 'up' | 'down' | 'stable' } | null
   >();
+  let assignmentWorkoutByClient = new Map<
+    string,
+    {
+      program: string | null;
+      cycle_weeks: number | null;
+      programmed_deloads: number[] | null;
+    }
+  >();
+  let managedWorkoutByClient = new Map<
+    string,
+    {
+      program: string | null;
+      cycle_weeks: number | null;
+      programmed_deloads: number[] | null;
+    }
+  >();
 
   if (clientIds.length > 0) {
     const [
@@ -306,7 +346,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
           heart_rate_avg,
           heart_rate_max,
           cycle_week,
-          workouts ( program, workout_type, cycle_weeks )
+          workouts ( program, workout_type, cycle_weeks, programmed_deloads )
         `)
         .in('user_id', clientIds)
         .gte('date', eightWeeksAgo.toISOString())
@@ -318,14 +358,14 @@ export async function getDashboardData(): Promise<DashboardData | null> {
           client_id,
           workout_id,
           assigned_at,
-          workouts ( program )
+          workouts ( program, cycle_weeks, programmed_deloads )
         `)
         .eq('coach_id', user.id)
         .in('client_id', clientIds)
         .order('assigned_at', { ascending: false }),
       supabase
         .from('workouts')
-        .select('id, user_id, program')
+        .select('id, user_id, program, cycle_weeks, programmed_deloads')
         .in('user_id', clientIds)
         .eq('managed_by_coach', true),
       supabase
@@ -383,6 +423,27 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       managedWorkouts ?? [],
       scheduledThisWeekByClient,
     );
+
+    for (const assignment of assignments ?? []) {
+      if (assignmentWorkoutByClient.has(assignment.client_id)) continue;
+      const workout = assignment.workouts as {
+        program: string | null;
+        cycle_weeks: number | null;
+        programmed_deloads: number[] | null;
+      } | null;
+      if (workout) {
+        assignmentWorkoutByClient.set(assignment.client_id, workout);
+      }
+    }
+
+    for (const workout of managedWorkouts ?? []) {
+      if (managedWorkoutByClient.has(workout.user_id)) continue;
+      managedWorkoutByClient.set(workout.user_id, {
+        program: workout.program,
+        cycle_weeks: workout.cycle_weeks,
+        programmed_deloads: workout.programmed_deloads,
+      });
+    }
   }
 
   const sessionsByClient = new Map<string, SessionRow[]>();
@@ -429,6 +490,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         activeProgramName: null,
         hasAssignedProgram: false,
       },
+      assignmentWorkoutByClient.get(c.client_id) ?? null,
+      managedWorkoutByClient.get(c.client_id) ?? null,
       weekStart,
       prevWeekStart,
       prevWeekEnd,

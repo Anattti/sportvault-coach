@@ -4,7 +4,7 @@ import { Plus, Dumbbell, Calendar, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import WorkoutUpdateMeta from '@/components/programs/WorkoutUpdateMeta';
 
 export default async function ProgramsPage() {
   const supabase = await createServerSupabaseClient();
@@ -22,11 +22,20 @@ export default async function ProgramsPage() {
       duration,
       cycle_weeks,
       created_at,
+      updated_at,
+      updated_by,
+      user_id,
       exercises ( count )
     `)
     .eq('user_id', user.id)
     .eq('managed_by_coach', false)
     .order('created_at', { ascending: false });
+
+  const { data: coachProfile } = await supabase
+    .from('user_profiles')
+    .select('nickname')
+    .eq('id', user.id)
+    .maybeSingle();
 
   return (
     <div className="space-y-6">
@@ -86,7 +95,13 @@ export default async function ProgramsPage() {
                 </div>
               </CardContent>
               <CardFooter className="pt-4 border-t border-border flex justify-between items-center text-xs text-muted-foreground bg-muted/10">
-                <span>Luotu {format(new Date(prog.created_at), 'd.M.yyyy')}</span>
+                <WorkoutUpdateMeta
+                  updatedAt={prog.updated_at ?? prog.created_at}
+                  updatedBy={prog.updated_by}
+                  ownerId={prog.user_id}
+                  updaterNickname={coachProfile?.nickname}
+                  viewerId={user.id}
+                />
                 <Button variant="ghost" size="sm" render={<Link href={`/programs/${prog.id}/edit`} />} nativeButton={false} className="h-8">
                     Muokkaa
                 </Button>

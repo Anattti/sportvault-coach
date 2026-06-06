@@ -7,6 +7,7 @@ interface KpiCardProps {
   subtitle?: string;
   icon: LucideIcon;
   iconClassName?: string;
+  iconColorClassName?: string;
   trend?: 'up' | 'down' | 'neutral';
   className?: string;
 }
@@ -17,6 +18,7 @@ export default function KpiCard({
   subtitle,
   icon: Icon,
   iconClassName,
+  iconColorClassName = 'text-primary',
   trend = 'neutral',
   className,
 }: KpiCardProps) {
@@ -43,7 +45,7 @@ export default function KpiCard({
               iconClassName,
             )}
           >
-            <Icon className="h-4 w-4 text-primary" />
+            <Icon className={cn('h-4 w-4', iconColorClassName)} />
           </div>
         </div>
 

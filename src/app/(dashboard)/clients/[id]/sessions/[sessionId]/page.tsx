@@ -190,10 +190,10 @@ export default async function SingleSessionPage({
               <ChevronLeft className="mr-1 h-4 w-4" />
               Takaisin asiakkaan tietoihin
           </Button>
-          <h2 className="text-3xl font-bold tracking-tight">
+          <h2 className="text-2xl font-bold tracking-tight">
             {formattedData.session.workoutName || 'Treenisessio'}
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Suoritettu {format(new Date(formattedData.session.date), 'd.M.yyyy')}
             {formattedData.session.cycleWeek && ` • Syklin viikko ${formattedData.session.cycleWeek}`}
           </p>
@@ -204,7 +204,7 @@ export default async function SingleSessionPage({
         <div className="order-2 lg:order-1">
           <SessionDetail data={formattedData} previousBestByExercise={previousBestByExercise} />
         </div>
-        <div className="order-1 lg:order-2 sticky top-6">
+        <div className="order-1 lg:order-2 lg:sticky lg:top-6">
           <CoachNoteEditor 
             sessionId={sessionId} 
             initialNote={formattedData.coachNote} 

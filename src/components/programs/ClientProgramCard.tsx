@@ -1,11 +1,10 @@
 import Link from 'next/link';
-import { format } from 'date-fns';
-import { fi } from 'date-fns/locale';
 import { Calendar, Clock, Dumbbell, LucideIcon, Pencil, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getWorkoutTypeConfig } from '@/lib/workouts/types';
 import DeleteClientProgramButton from '@/components/programs/DeleteClientProgramButton';
+import WorkoutUpdateMeta from '@/components/programs/WorkoutUpdateMeta';
 
 interface ClientProgramCardProps {
   id: string;
@@ -16,7 +15,11 @@ interface ClientProgramCardProps {
   cycleWeeks: number | null;
   exerciseCount: number;
   managedByCoach: boolean;
-  createdAt: string;
+  updatedAt: string;
+  updatedBy?: string | null;
+  ownerId: string;
+  updaterNickname?: string | null;
+  viewerId?: string;
 }
 
 function StatChip({
@@ -48,7 +51,11 @@ export default function ClientProgramCard({
   cycleWeeks,
   exerciseCount,
   managedByCoach,
-  createdAt,
+  updatedAt,
+  updatedBy,
+  ownerId,
+  updaterNickname,
+  viewerId,
 }: ClientProgramCardProps) {
   const typeConfig = getWorkoutTypeConfig(workoutType);
   const TypeIcon = typeConfig.icon;
@@ -103,9 +110,14 @@ export default function ClientProgramCard({
       </div>
 
       <div className="relative flex items-center justify-between gap-3 border-t border-white/8 bg-white/[0.02] px-5 py-3">
-        <time className="text-xs tabular-nums text-muted-foreground">
-          Luotu {format(new Date(createdAt), 'd.M.yyyy', { locale: fi })}
-        </time>
+        <WorkoutUpdateMeta
+          updatedAt={updatedAt}
+          updatedBy={updatedBy}
+          ownerId={ownerId}
+          updaterNickname={updaterNickname}
+          viewerId={viewerId}
+          className="text-xs tabular-nums text-muted-foreground"
+        />
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, Check } from 'lucide-react';
 
 interface CoachNoteEditorProps {
@@ -27,26 +26,27 @@ export default function CoachNoteEditor({ sessionId, initialNote }: CoachNoteEdi
       if (!userResp.user) throw new Error('Not authenticated');
 
       if (note.trim() === '') {
-        // Poista muistiinpano
         await supabase
           .from('coach_session_notes')
           .delete()
           .eq('session_id', sessionId)
           .eq('coach_id', userResp.user.id);
       } else {
-        // Upsert muistiinpano
         const { error } = await supabase
           .from('coach_session_notes')
-          .upsert({
-            coach_id: userResp.user.id,
-            session_id: sessionId,
-            content: note.trim(),
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'coach_id, session_id' });
+          .upsert(
+            {
+              coach_id: userResp.user.id,
+              session_id: sessionId,
+              content: note.trim(),
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'coach_id, session_id' },
+          );
 
         if (error) throw error;
       }
-      
+
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -57,32 +57,36 @@ export default function CoachNoteEditor({ sessionId, initialNote }: CoachNoteEdi
   };
 
   return (
-    <Card className="bg-card border-border shadow-md">
-      <CardHeader>
-        <CardTitle className="text-lg text-primary">Valmentajan palaute</CardTitle>
-        <CardDescription>
-          Tämä muistiinpano näkyy urheilijalle hänen sovelluksessaan tässä treenisessiossa.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="glass-panel rounded-2xl overflow-hidden">
+      <div className="border-b border-white/8 px-5 py-4">
+        <h3 className="text-base font-semibold text-primary">Valmentajan palaute</h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Näkyy urheilijalle hänen sovelluksessaan tässä treenisessiossa.
+        </p>
+      </div>
+      <div className="space-y-4 p-5">
         <Textarea
           placeholder="Kirjoita palaute urheilijalle... (esim. 'Hyvin pidetty RPE kurissa!')"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          className="min-h-[120px] bg-background border-border resize-y"
+          className="min-h-[120px] resize-y rounded-xl border-white/10 bg-black/40 focus-visible:ring-primary"
         />
-        <div className="flex justify-end items-center gap-4">
+        <div className="flex items-center justify-end gap-4">
           {saved && (
-            <span className="text-sm text-primary flex items-center">
-              <Check className="h-4 w-4 mr-1" /> Tallennettu
+            <span className="flex items-center text-sm text-primary">
+              <Check className="mr-1 h-4 w-4" /> Tallennettu
             </span>
           )}
-          <Button onClick={handleSave} disabled={isSaving || note === initialNote} className="font-semibold">
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || note === initialNote}
+            className="font-semibold"
+          >
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Tallenna palaute
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

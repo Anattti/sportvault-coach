@@ -782,6 +782,8 @@ export type Database = {
           progression: string | null
           progression_percentage: string | null
           source_template_id: string | null
+          updated_at: string | null
+          updated_by: string | null
           user_id: string
           workout_type: string
         }
@@ -799,6 +801,8 @@ export type Database = {
           programmed_deloads?: number[] | null
           progression?: string | null
           progression_percentage?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
           user_id: string
           workout_type: string
         }
@@ -816,6 +820,8 @@ export type Database = {
           programmed_deloads?: number[] | null
           progression?: string | null
           progression_percentage?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
           user_id?: string
           workout_type?: string
         }

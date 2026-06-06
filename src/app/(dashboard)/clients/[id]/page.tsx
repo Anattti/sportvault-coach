@@ -5,11 +5,16 @@ import DevelopmentHero from '@/components/client-analytics/DevelopmentHero';
 import PersonalRecordsTimeline from '@/components/client-analytics/PersonalRecordsTimeline';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Target, Trophy, Clock, ClipboardList, BarChart3 } from 'lucide-react';
+import { Trophy, Clock, BarChart3 } from 'lucide-react';
 import { endOfWeek, format, parseISO, startOfWeek, subWeeks } from 'date-fns';
 import { fi } from 'date-fns/locale';
 import { getClientAnalytics } from '@/lib/client-analytics/queries';
 import { getVolumeTrendLabel } from '@/lib/dashboard/metrics';
+import {
+  resolveActiveProgramMeta,
+  resolveCycleStatus,
+} from '@/lib/programs/cycle-status';
+import ActiveProgramCard from '@/components/programs/ActiveProgramCard';
 import { fetchNotedSessionIds, formatSessionSummaries } from '@/lib/sessions/format';
 import { cn } from '@/lib/utils';
 
@@ -44,7 +49,8 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
           heart_rate_avg,
           heart_rate_max,
           cycle_week,
-          workouts ( program, workout_type, cycle_weeks ),
+          workout_id,
+          workouts ( program, workout_type, cycle_weeks, programmed_deloads ),
           session_exercises ( id )
         `)
         .eq('user_id', clientId)
@@ -55,7 +61,7 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
         .from('coach_program_assignments')
         .select(`
           assigned_at,
-          workouts ( program, cycle_weeks, workout_type )
+          workouts ( program, cycle_weeks, workout_type, programmed_deloads )
         `)
         .eq('client_id', clientId)
         .eq('coach_id', user?.id ?? '')
@@ -70,7 +76,7 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
         .maybeSingle(),
       supabase
         .from('workouts')
-        .select('program, cycle_weeks, workout_type')
+        .select('program, cycle_weeks, workout_type, programmed_deloads')
         .eq('user_id', clientId)
         .eq('managed_by_coach', true)
         .order('created_at', { ascending: false })
@@ -85,7 +91,36 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
     program: string | null;
     cycle_weeks: number | null;
     workout_type: string | null;
+    programmed_deloads: number[] | null;
   } | null;
+
+  const programMeta = resolveActiveProgramMeta(
+    assignedWorkout,
+    managedWorkout,
+    latestSession?.workouts as {
+      program: string | null;
+      cycle_weeks: number | null;
+      programmed_deloads: number[] | null;
+    } | null,
+  );
+
+  const cycleStatus = resolveCycleStatus(
+    sessionRows.map((session) => ({
+      date: session.date,
+      cycle_week: session.cycle_week,
+      workout_id: session.workout_id,
+    })),
+    programMeta,
+  );
+
+  const programLabel = cycleStatus.programName ?? 'Ei määritetty';
+  const hasAssignedProgram = Boolean(cycleStatus.programName);
+  const activeWorkoutType =
+    assignedWorkout?.workout_type ??
+    managedWorkout?.workout_type ??
+    latestSession?.workouts?.workout_type ??
+    null;
+  const coachNotes = relationship?.notes?.trim() ?? '';
 
   const thisWeekSessions = sessionRows.filter((s) => {
     if (!s.date) return false;
@@ -127,29 +162,6 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
     sessionRows.slice(0, 5),
     notedSessionIds,
   );
-
-  const activeProgram =
-    assignedWorkout?.program ??
-    managedWorkout?.program ??
-    latestSession?.workouts?.program ??
-    null;
-
-  const programLabel = activeProgram ?? 'Ei määritetty';
-  const hasAssignedProgram = Boolean(activeProgram);
-
-  const cycleWeeks =
-    assignedWorkout?.cycle_weeks ??
-    managedWorkout?.cycle_weeks ??
-    latestSession?.workouts?.cycle_weeks ??
-    null;
-
-  const cycleLabel = latestSession?.cycle_week != null
-    ? cycleWeeks != null
-      ? `Viikko ${latestSession.cycle_week} / ${cycleWeeks}`
-      : `Viikko ${latestSession.cycle_week}`
-    : null;
-
-  const coachNotes = relationship?.notes?.trim() ?? '';
 
   return (
     <div className="space-y-6">
@@ -214,30 +226,13 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aktiivinen ohjelma</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold truncate">{programLabel}</div>
-            {cycleLabel && (
-              <p className="text-xs text-muted-foreground mt-1">{cycleLabel}</p>
-            )}
-            {!hasAssignedProgram && (
-              <Button
-                variant="link"
-                size="sm"
-                className="mt-2 h-auto p-0 text-primary"
-                render={<Link href={`/clients/${clientId}/programs`} />}
-                nativeButton={false}
-              >
-                <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
-                Määritä ohjelma
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        <ActiveProgramCard
+          cycleStatus={cycleStatus}
+          programLabel={programLabel}
+          hasAssignedProgram={hasAssignedProgram}
+          clientId={clientId}
+          workoutType={activeWorkoutType}
+        />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

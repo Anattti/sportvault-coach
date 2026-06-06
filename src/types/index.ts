@@ -29,6 +29,9 @@ export interface ClientOverview {
   trainedThisWeek: boolean;
   cycleWeek: number | null;
   cycleWeeks: number | null;
+  programmedDeloads: number[];
+  isDeloadWeek: boolean;
+  hasCycle: boolean;
   programName: string | null;
   activeProgramName: string | null;
   hasAssignedProgram: boolean;
