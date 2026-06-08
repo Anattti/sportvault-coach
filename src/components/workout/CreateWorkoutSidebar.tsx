@@ -96,7 +96,7 @@ export default function CreateWorkoutSidebar({
         </Select>
       </div>
 
-      {/* Syklin viikot */}
+      {/* Jakson kesto */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Kesto (viikkoa)</label>
@@ -107,14 +107,14 @@ export default function CreateWorkoutSidebar({
             <SelectContent className="glass-panel border-white/10">
               {[1,2,3,4,5,6,7,8,9,10,11,12].map((num) => (
                 <SelectItem key={num} value={String(num)} className="cursor-pointer">
-                  {num === 1 ? '1 viikko (ei sykliä)' : `${num} viikkoa`}
+                  {num === 1 ? '1 viikko (ei jaksoa)' : `${num} viikkoa`}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Kevennyssykli</label>
+          <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Kevennysviikko</label>
           <Select value={String(deloadCycle)} onValueChange={(v) => v && setDeloadCycle(parseInt(v))}>
             <SelectTrigger className="w-full bg-black/20 border-white/10 rounded-xl">
               <SelectValue />

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Calendar, Clock, Dumbbell, LucideIcon, Pencil, Sparkles } from 'lucide-react';
+import { Calendar, Clock, Dumbbell, History, LucideIcon, Pencil, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getWorkoutTypeConfig } from '@/lib/workouts/types';
@@ -90,7 +90,7 @@ export default function ClientProgramCard({
         <div className="grid grid-cols-3 gap-2">
           <StatChip
             icon={Calendar}
-            label="Sykli"
+            label="Jakso"
             value={cycleWeeks != null ? `${cycleWeeks} vk` : '—'}
           />
           <StatChip
@@ -112,6 +112,16 @@ export default function ClientProgramCard({
           className="text-xs tabular-nums text-muted-foreground"
         />
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs font-medium text-muted-foreground hover:bg-white/5 hover:text-foreground"
+            render={<Link href={`/clients/${clientId}/sessions/workout/${id}`} />}
+            nativeButton={false}
+          >
+            <History className="mr-1.5 h-3.5 w-3.5" />
+            Historia
+          </Button>
           <Button
             variant="ghost"
             size="sm"

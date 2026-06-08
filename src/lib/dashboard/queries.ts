@@ -573,7 +573,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         lastSessionDate: overview.lastSessionDate,
         daysInactive: null,
         detail: overview.cycleWeek != null
-          ? `Sykliviikko ${overview.cycleWeek} ei etene`
+          ? `Viikko ${overview.cycleWeek} ei etene`
           : 'Ohjelman viikko ei etene',
       });
     }
@@ -670,6 +670,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     date: s.date ?? '',
     duration: s.duration ?? 0,
     totalVolume: s.total_volume ?? 0,
+    workoutId: s.workout_id ?? null,
     feeling: s.feeling,
     rpeAverage: s.rpe_average,
     heartRateAvg: s.heart_rate_avg,
@@ -678,6 +679,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     workoutType: s.workouts?.workout_type ?? null,
     exerciseCount: exerciseCountBySession.get(s.id) ?? 0,
     hasCoachNote: notedSessionIds.has(s.id),
+    cycleWeek: s.cycle_week,
+    cycleWeeks: s.workouts?.cycle_weeks ?? null,
     isNew: newSessionIds.has(s.id),
   }));
 

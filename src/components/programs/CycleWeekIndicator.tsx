@@ -53,13 +53,13 @@ export default function CycleWeekIndicator({
         </div>
 
         {programStuck && (
-          <span title="Sykliviikko ei etene">
+          <span title="Jakson viikko ei etene">
             <AlertTriangle
               className={cn(
                 'shrink-0 text-purple-400',
                 isCompact ? 'h-3 w-3' : 'h-3.5 w-3.5',
               )}
-              aria-label="Sykliviikko ei etene"
+              aria-label="Jakson viikko ei etene"
             />
           </span>
         )}

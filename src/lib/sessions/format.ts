@@ -11,7 +11,13 @@ type RawSessionRow = {
   rpe_average: number | null;
   heart_rate_avg: number | null;
   heart_rate_max: number | null;
-  workouts?: { program: string | null; workout_type: string | null } | null;
+  workout_id?: string | null;
+  cycle_week?: number | null;
+  workouts?: {
+    program: string | null;
+    workout_type: string | null;
+    cycle_weeks?: number | null;
+  } | null;
   session_exercises?: SessionExerciseRow[] | null;
 };
 
@@ -31,6 +37,7 @@ export function formatSessionSummary(
     date: session.date ?? '',
     duration: session.duration ?? 0,
     totalVolume: session.total_volume ?? 0,
+    workoutId: session.workout_id ?? null,
     feeling: session.feeling,
     rpeAverage: session.rpe_average,
     heartRateAvg: session.heart_rate_avg,
@@ -39,7 +46,17 @@ export function formatSessionSummary(
     workoutType: session.workouts?.workout_type ?? null,
     exerciseCount: countExercises(session.session_exercises),
     hasCoachNote: notedSessionIds.has(session.id),
+    cycleWeek: session.cycle_week ?? null,
+    cycleWeeks: session.workouts?.cycle_weeks ?? null,
   };
+}
+
+export function formatCycleWeekLabel(
+  cycleWeek: number | null,
+  cycleWeeks: number | null,
+): string | null {
+  if (cycleWeek == null || cycleWeeks == null || cycleWeeks <= 0) return null;
+  return `${cycleWeek}/${cycleWeeks}`;
 }
 
 export function formatSessionSummaries(

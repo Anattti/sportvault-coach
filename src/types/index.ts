@@ -13,6 +13,7 @@ export interface CoachClient {
     weight: number | null;
     height: number | null;
     experience_level: string | null;
+    fitness_goals?: string | null;
   };
 }
 
@@ -191,6 +192,7 @@ export interface SessionSummary {
   date: string;
   duration: number;
   totalVolume: number;
+  workoutId: string | null;
   workoutName: string | null;
   workoutType: string | null;
   feeling: number | null;
@@ -199,6 +201,72 @@ export interface SessionSummary {
   heartRateMax: number | null;
   exerciseCount: number;
   hasCoachNote: boolean;
+  cycleWeek: number | null;
+  cycleWeeks: number | null;
+}
+
+export interface WorkoutHistoryMeta {
+  workoutId: string;
+  programName: string;
+  workoutType: string | null;
+  cycleWeeks: number | null;
+  programmedDeloads: number[];
+  totalSessions: number;
+  avgRpe: number | null;
+  latestVolume: number | null;
+  currentWeek: number | null;
+}
+
+export interface WorkoutHistorySession extends SessionSummary {
+  volumeChangePercent: number | null;
+}
+
+export interface WeekHistoryGroup {
+  cycleWeek: number;
+  isDeload: boolean;
+  sessions: WorkoutHistorySession[];
+  isEmpty: boolean;
+}
+
+export interface CycleRunGroup {
+  runIndex: number;
+  startDate: string;
+  endDate: string;
+  weeks: WeekHistoryGroup[];
+}
+
+export interface WorkoutExerciseSetRow {
+  setId: string;
+  sessionId: string;
+  date: string;
+  cycleWeek: number | null;
+  storedCycleWeek: number | null;
+  cycleWeekInferred: boolean;
+  cycleWeeks: number | null;
+  setIndex: number;
+  displaySetIndex: number;
+  weightUsed: number | null;
+  repsCompleted: number | null;
+  rpe: number | null;
+  e1rm: number | null;
+}
+
+export interface WorkoutExerciseHistory {
+  name: string;
+  orderIndex: number;
+  isProgramExercise: boolean;
+  rows: WorkoutExerciseSetRow[];
+  bestE1rm: number | null;
+  sessionCount: number;
+}
+
+export interface WorkoutHistoryData {
+  meta: WorkoutHistoryMeta;
+  cycleRuns: CycleRunGroup[];
+  unscheduled: WorkoutHistorySession[];
+  isFlatTimeline: boolean;
+  flatSessions: WorkoutHistorySession[];
+  exercises: WorkoutExerciseHistory[];
 }
 
 // Treenisession täysi data (detail-näkymä)

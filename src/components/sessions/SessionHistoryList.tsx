@@ -7,16 +7,19 @@ import {
   formatMonthDayFi,
   formatMonthYearFi,
   formatWeekdayShortFi,
+  formatDateFi,
 } from '@/lib/dates/fi';
 import {
   Activity,
   ChevronRight,
   Flame,
+  History,
   StickyNote,
 } from 'lucide-react';
 import { SessionSummary } from '@/types';
 import { primaryActiveClassName } from '@/config/navigation';
 import { getWorkoutTypeConfig } from '@/lib/workouts/types';
+import SessionCycleBadge from '@/components/sessions/SessionCycleBadge';
 import { cn } from '@/lib/utils';
 
 interface SessionHistoryListProps {
@@ -157,12 +160,17 @@ export default function SessionHistoryList({ sessions, clientId }: SessionHistor
               </h3>
               <div className="glass-panel rounded-2xl overflow-hidden divide-y divide-white/5">
                 {group.sessions.map((session) => (
-                  <Link
+                  <div
                     key={session.id}
-                    href={`/clients/${clientId}/sessions/${session.id}`}
-                    className="flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-white/[0.03] group"
+                    className="relative flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-white/[0.03] group"
                   >
-                    <div className="flex w-[3.25rem] shrink-0 flex-col items-center rounded-xl bg-white/[0.04] py-2 ring-1 ring-white/8">
+                    <Link
+                      href={`/clients/${clientId}/sessions/${session.id}`}
+                      className="absolute inset-0 z-0 rounded-none"
+                      aria-label={`Avaa treeni ${session.workoutName ?? 'Nimetön treeni'} ${formatDateFi(parseISO(session.date))}`}
+                    />
+
+                    <div className="relative z-10 flex w-[3.25rem] shrink-0 flex-col items-center rounded-xl bg-white/[0.04] py-2 ring-1 ring-white/8 pointer-events-none">
                       <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         {formatWeekdayShortFi(parseISO(session.date))}
                       </span>
@@ -174,11 +182,28 @@ export default function SessionHistoryList({ sessions, clientId }: SessionHistor
                       </span>
                     </div>
 
-                    <div className="min-w-0 flex-1">
+                    <div className="relative z-10 min-w-0 flex-1 pointer-events-none">
                       <div className="flex items-center gap-2">
-                        <p className="truncate font-medium text-foreground">
-                          {session.workoutName || 'Nimetön treeni'}
-                        </p>
+                        {session.workoutId ? (
+                          <Link
+                            href={`/clients/${clientId}/sessions/workout/${session.workoutId}`}
+                            className="pointer-events-auto inline-flex min-w-0 max-w-full items-center gap-1.5 truncate font-medium text-foreground transition-colors hover:text-primary hover:underline"
+                            title="Näytä treenin koko historia"
+                          >
+                            <span className="truncate">
+                              {session.workoutName || 'Nimetön treeni'}
+                            </span>
+                            <History className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                          </Link>
+                        ) : (
+                          <p className="truncate font-medium text-foreground">
+                            {session.workoutName || 'Nimetön treeni'}
+                          </p>
+                        )}
+                        <SessionCycleBadge
+                          cycleWeek={session.cycleWeek}
+                          cycleWeeks={session.cycleWeeks}
+                        />
                         {session.hasCoachNote && (
                           <StickyNote className="h-3.5 w-3.5 shrink-0 text-primary" aria-label="Valmentajan muistiinpano" />
                         )}
@@ -200,7 +225,7 @@ export default function SessionHistoryList({ sessions, clientId }: SessionHistor
                       </p>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-3">
+                    <div className="relative z-10 flex shrink-0 items-center gap-3 pointer-events-none">
                       <div className="text-right">
                         <p className="text-sm font-semibold tabular-nums">
                           {session.totalVolume.toLocaleString('fi-FI')} kg
@@ -214,7 +239,7 @@ export default function SessionHistoryList({ sessions, clientId }: SessionHistor
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground opacity-100 md:opacity-0 transition-opacity md:group-hover:opacity-100" />
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             </section>

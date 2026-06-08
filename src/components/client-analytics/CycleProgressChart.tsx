@@ -28,13 +28,13 @@ export default function CycleProgressChart({ data }: CycleProgressChartProps) {
   return (
     <Card className="glass-panel border-white/8">
       <CardHeader>
-        <CardTitle>Sykliviikon eteneminen</CardTitle>
+        <CardTitle>Jakson eteneminen</CardTitle>
         <CardDescription>Ohjelman viikko treenien aikajärjestyksessä</CardDescription>
       </CardHeader>
       <CardContent>
         {chartData.length < 2 ? (
           <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
-            Ei tarpeeksi dataa sykliseurantaan.
+            Ei tarpeeksi dataa jakson seurantaan.
           </div>
         ) : (
           <div className="h-[200px] w-full min-w-0">
@@ -63,7 +63,7 @@ export default function CycleProgressChart({ data }: CycleProgressChartProps) {
                 <Line
                   type="stepAfter"
                   dataKey="cycleWeek"
-                  name="Sykliviikko"
+                  name="Viikko"
                   stroke="rgba(0,255,65,0.8)"
                   strokeWidth={2}
                   dot={{ fill: 'rgba(0,255,65,0.8)', r: 3 }}

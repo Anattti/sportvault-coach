@@ -76,20 +76,28 @@ export default function DevelopmentHero({
           <KpiCard key={card.title} {...card} />
         ))}
       </div>
-      {!compact && (
-        <div className="glass-panel rounded-2xl px-5 py-4 flex items-start gap-3">
-          {summary.strengthTrend === 'up' || summary.volumeTrend === 'up' ? (
-            <TrendingUp className="h-5 w-5 shrink-0 text-primary mt-0.5" />
-          ) : summary.strengthTrend === 'down' || summary.volumeTrend === 'down' ? (
-            <TrendingDown className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
-          ) : (
-            <Flame className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
+      <div
+        className={cn(
+          'glass-panel rounded-2xl flex items-start gap-3',
+          compact ? 'px-4 py-3' : 'px-5 py-4',
+        )}
+      >
+        {summary.strengthTrend === 'up' || summary.volumeTrend === 'up' ? (
+          <TrendingUp className="h-5 w-5 shrink-0 text-primary mt-0.5" />
+        ) : summary.strengthTrend === 'down' || summary.volumeTrend === 'down' ? (
+          <TrendingDown className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
+        ) : (
+          <Flame className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
+        )}
+        <p
+          className={cn(
+            'text-muted-foreground leading-relaxed',
+            compact ? 'text-xs' : 'text-sm',
           )}
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {summary.interpretation}
-          </p>
-        </div>
-      )}
+        >
+          {summary.interpretation}
+        </p>
+      </div>
     </div>
   );
 }

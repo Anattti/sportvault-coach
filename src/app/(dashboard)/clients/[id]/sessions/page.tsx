@@ -19,7 +19,9 @@ export default async function ClientSessionsPage({ params }: { params: Promise<{
       rpe_average,
       heart_rate_avg,
       heart_rate_max,
-      workouts ( program, workout_type ),
+      cycle_week,
+      workout_id,
+      workouts ( program, workout_type, cycle_weeks ),
       session_exercises ( id )
     `)
     .eq('user_id', clientId)

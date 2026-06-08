@@ -14,6 +14,7 @@ import {
   Dumbbell,
   FileText,
   CalendarPlus,
+  Target,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -23,8 +24,6 @@ import {
   getClientTabLinkClassName,
   isClientTabActive,
 } from '@/config/navigation';
-import CycleWeekIndicator from '@/components/programs/CycleWeekIndicator';
-import { ProgramCycleStatus } from '@/lib/programs/cycle-status';
 import { CoachClient } from '@/types';
 import ClientNotesDialog from '@/components/clients/ClientNotesDialog';
 import ClientStatusMenu from '@/components/clients/ClientStatusMenu';
@@ -32,7 +31,6 @@ import { cn } from '@/lib/utils';
 
 interface ClientProfileHeaderProps {
   client: CoachClient;
-  cycleStatus: ProgramCycleStatus;
 }
 
 const statusConfig: Record<
@@ -78,7 +76,7 @@ function StatChip({
   );
 }
 
-export default function ClientProfileHeader({ client, cycleStatus }: ClientProfileHeaderProps) {
+export default function ClientProfileHeader({ client }: ClientProfileHeaderProps) {
   const pathname = usePathname();
   const baseUrl = `/clients/${client.client_id}`;
 
@@ -101,11 +99,6 @@ export default function ClientProfileHeader({ client, cycleStatus }: ClientProfi
     profile?.age ||
     profile?.weight ||
     profile?.height;
-
-  const hasCycle =
-    cycleStatus.hasCycle &&
-    cycleStatus.currentWeek != null &&
-    cycleStatus.totalWeeks != null;
 
   const experienceLabel = profile?.experience_level
     ? experienceLabels[profile.experience_level] ?? profile.experience_level
@@ -189,27 +182,18 @@ export default function ClientProfileHeader({ client, cycleStatus }: ClientProfi
                     )}
                   </div>
                 )}
+
+                {profile?.fitness_goals && (
+                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                    <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/70" aria-hidden="true" />
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      <span className="font-medium text-foreground/80">Tavoitteet: </span>
+                      {profile.fitness_goals}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-
-            {hasCycle && (
-              <div className="w-full shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3.5 sm:max-w-sm xl:w-72">
-                <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Aktiivinen ohjelma
-                </p>
-                {cycleStatus.programName && (
-                  <p className="mb-2.5 truncate text-sm font-medium text-foreground">
-                    {cycleStatus.programName}
-                  </p>
-                )}
-                <CycleWeekIndicator
-                  currentWeek={cycleStatus.currentWeek!}
-                  totalWeeks={cycleStatus.totalWeeks!}
-                  programmedDeloads={cycleStatus.programmedDeloads}
-                  programStuck={cycleStatus.programStuck}
-                />
-              </div>
-            )}
 
             <div className="hidden shrink-0 flex-col gap-2 xl:flex xl:min-w-[11rem]">
               {assignProgramButton}

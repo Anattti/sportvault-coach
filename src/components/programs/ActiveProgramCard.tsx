@@ -61,13 +61,13 @@ export default function ActiveProgramCard({
           <div className="flex items-center gap-2 text-sm text-white/70">
             <TypeIcon className="h-4 w-4 shrink-0 text-primary" />
             <span className="truncate">
-              Syklissä viikko {cycleStatus.currentWeek} / {cycleStatus.totalWeeks}
+              Jaksolla viikko {cycleStatus.currentWeek} / {cycleStatus.totalWeeks}
             </span>
           </div>
 
           {cycleStatus.programStuck && (
             <p className="mt-3 text-xs font-medium text-purple-400">
-              Sykliviikko ei etene — tarkista urheilijan eteneminen.
+              Jakson viikko ei etene — tarkista urheilijan eteneminen.
             </p>
           )}
         </CardContent>

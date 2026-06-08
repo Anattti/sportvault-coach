@@ -82,7 +82,7 @@ function getDetailText(client: AttentionClient): string {
     case 'no_program':
       return 'Lisää treeniohjelma asiakkaalle';
     case 'program_stuck':
-      return 'Sykliviikko ei etene';
+      return 'Jakson viikko ei etene';
     default:
       return '';
   }
