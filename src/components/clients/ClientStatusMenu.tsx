@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
 import { useRouter } from 'next/navigation';
 
@@ -18,9 +19,13 @@ type ClientStatus = 'active' | 'paused' | 'ended';
 export default function ClientStatusMenu({
   relationshipId,
   currentStatus,
+  compact = false,
+  className,
 }: {
   relationshipId: string;
   currentStatus: ClientStatus;
+  compact?: boolean;
+  className?: string;
 }) {
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
@@ -56,9 +61,20 @@ export default function ClientStatusMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="outline" size="sm" disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
-            Hallitse suhdetta
+          <Button
+            variant="outline"
+            size={compact ? 'default' : 'sm'}
+            disabled={loading}
+            className={cn(compact && 'w-full', className)}
+            aria-label="Hallitse asiakassuhdetta"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <MoreVertical className="h-4 w-4" />
+            )}
+            {!compact && 'Hallitse suhdetta'}
+            {compact && <span className="truncate">Suhde</span>}
           </Button>
         }
       />

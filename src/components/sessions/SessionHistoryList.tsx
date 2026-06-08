@@ -212,7 +212,7 @@ export default function SessionHistoryList({ sessions, clientId }: SessionHistor
                           </span>
                         )}
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-100 md:opacity-0 transition-opacity md:group-hover:opacity-100" />
                     </div>
                   </Link>
                 ))}

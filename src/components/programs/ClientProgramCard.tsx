@@ -58,7 +58,6 @@ export default function ClientProgramCard({
   viewerId,
 }: ClientProgramCardProps) {
   const typeConfig = getWorkoutTypeConfig(workoutType);
-  const TypeIcon = typeConfig.icon;
   const durationMin = Math.floor((duration ?? 0) / 60);
 
   return (
@@ -71,27 +70,21 @@ export default function ClientProgramCard({
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.04] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
       <div className="relative flex flex-1 flex-col gap-5 p-5">
-        <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
-            <TypeIcon className="h-5 w-5 text-primary" />
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="truncate text-lg font-semibold tracking-tight text-foreground">
+              {program}
+            </h3>
+            {managedByCoach && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary ring-1 ring-primary/25">
+                <Sparkles className="h-3 w-3" />
+                Valmentajan
+              </span>
+            )}
           </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="truncate text-lg font-semibold tracking-tight text-foreground">
-                {program}
-              </h3>
-              {managedByCoach && (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary ring-1 ring-primary/25">
-                  <Sparkles className="h-3 w-3" />
-                  Valmentajan
-                </span>
-              )}
-            </div>
-            <p className="mt-0.5 text-xs font-medium capitalize text-muted-foreground">
-              {typeConfig.label}
-            </p>
-          </div>
+          <p className="mt-0.5 text-xs font-medium capitalize text-muted-foreground">
+            {typeConfig.label}
+          </p>
         </div>
 
         <div className="grid grid-cols-3 gap-2">

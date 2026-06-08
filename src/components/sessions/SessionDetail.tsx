@@ -116,8 +116,8 @@ export default function SessionDetail({ data, previousBestByExercise = {} }: Ses
                         <th className="px-3 py-3 font-medium">Paino</th>
                         <th className="px-3 py-3 font-medium">Toistot</th>
                         <th className="px-3 py-3 font-medium">RPE</th>
-                        <th className="px-3 py-3 font-medium">e1RM</th>
-                        <th className="px-5 py-3 font-medium">Lepo</th>
+                        <th className="hidden sm:table-cell px-3 py-3 font-medium">e1RM</th>
+                        <th className="hidden sm:table-cell px-5 py-3 font-medium">Lepo</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
@@ -149,10 +149,10 @@ export default function SessionDetail({ data, previousBestByExercise = {} }: Ses
                                 '—'
                               )}
                             </td>
-                            <td className="px-3 py-3.5 tabular-nums text-muted-foreground">
+                            <td className="hidden sm:table-cell px-3 py-3.5 tabular-nums text-muted-foreground">
                               {setE1RM ? `${setE1RM} kg` : '—'}
                             </td>
-                            <td className="px-5 py-3.5 tabular-nums text-muted-foreground">
+                            <td className="hidden sm:table-cell px-5 py-3.5 tabular-nums text-muted-foreground">
                               {set.restTimeTaken
                                 ? `${Math.floor(set.restTimeTaken / 60)}m ${set.restTimeTaken % 60}s`
                                 : '—'}

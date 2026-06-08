@@ -33,8 +33,8 @@ export default function E1RMChart({ exerciseName, data }: E1RMChartProps) {
             Ei tarpeeksi dataa kaavion piirtämiseen. (Vähintään 2 treeniä vaaditaan)
           </div>
         ) : (
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[300px] w-full min-w-0">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <LineChart data={formattedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
                 <XAxis 

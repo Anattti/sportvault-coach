@@ -59,60 +59,83 @@ export default function ExerciseItem({
       }`}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-white/5 bg-black/20">
-        <div 
-          {...attributes} 
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-white/5"
-        >
-          <GripVertical size={20} />
-        </div>
-        
-        <div className="flex-1 flex flex-col gap-1">
-          <Input 
-            value={exercise.name}
-            onChange={(e) => updateExercise(exercise.id, 'name', e.target.value)}
-            placeholder="Liikkeen nimi"
-            className="text-lg font-bold border-0 bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:text-primary rounded-none"
-          />
-          <div className="flex items-center gap-2">
+      <div className="flex flex-col md:flex-row md:items-center gap-3 p-4 border-b border-white/5 bg-black/20">
+        <div className="flex items-center gap-3 w-full md:flex-1 md:min-w-0">
+          <div 
+            {...attributes} 
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors p-2 -m-1 rounded-md hover:bg-white/5 min-h-[44px] min-w-[44px] flex items-center justify-center md:min-h-0 md:min-w-0 md:p-1"
+          >
+            <GripVertical size={20} />
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <Input 
+              value={exercise.name}
+              onChange={(e) => updateExercise(exercise.id, 'name', e.target.value)}
+              placeholder="Liikkeen nimi"
+              className="text-lg font-bold border-0 bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:text-primary rounded-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0 md:hidden">
             <Button
               variant="ghost"
-              size="sm"
-              onClick={() => exercise.setBlocks.forEach(b => updateSetBlock(exercise.id, b.id, 'targetType', 'reps'))}
-              className={`h-6 px-2 text-[10px] font-bold tracking-wider rounded-md ${currentWeekBlocks[0]?.targetType === 'reps' ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted-foreground hover:text-white'}`}
+              size="icon"
+              onClick={() => setNotesVisible(!notesVisible)}
+              className={`min-h-[44px] min-w-[44px] rounded-full transition-colors ${notesVisible ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'}`}
             >
-              REPS
+              <MessageSquare className="w-5 h-5" />
             </Button>
+
             <Button
               variant="ghost"
-              size="sm"
-              onClick={() => exercise.setBlocks.forEach(b => updateSetBlock(exercise.id, b.id, 'targetType', 'seconds'))}
-              className={`h-6 px-2 text-[10px] font-bold tracking-wider rounded-md ${currentWeekBlocks[0]?.targetType === 'seconds' ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted-foreground hover:text-white'}`}
+              size="icon"
+              onClick={() => removeExercise(exercise.id)}
+              className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
             >
-              AIKA
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => exercise.setBlocks.forEach(b => updateSetBlock(exercise.id, b.id, 'targetType', 'meters'))}
-              className={`h-6 px-2 text-[10px] font-bold tracking-wider rounded-md ${currentWeekBlocks[0]?.targetType === 'meters' ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted-foreground hover:text-white'}`}
-            >
-              MATKA
-            </Button>
-            <div className="w-px h-4 bg-white/10 mx-1"></div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => exercise.setBlocks.forEach(b => updateSetBlock(exercise.id, b.id, 'isBodyweight', !currentWeekBlocks[0]?.isBodyweight))}
-              className={`h-6 px-2 text-[10px] font-bold tracking-wider rounded-md ${currentWeekBlocks[0]?.isBodyweight ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted-foreground hover:text-white'}`}
-            >
-              BW
+              <Trash2 className="w-5 h-5" />
             </Button>
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-2 pl-11 md:pl-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => exercise.setBlocks.forEach(b => updateSetBlock(exercise.id, b.id, 'targetType', 'reps'))}
+            className={`min-h-[44px] min-w-[44px] md:min-h-6 md:min-w-0 md:h-6 md:px-2 px-3 text-[10px] font-bold tracking-wider rounded-md ${currentWeekBlocks[0]?.targetType === 'reps' ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted-foreground hover:text-white'}`}
+          >
+            REPS
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => exercise.setBlocks.forEach(b => updateSetBlock(exercise.id, b.id, 'targetType', 'seconds'))}
+            className={`min-h-[44px] min-w-[44px] md:min-h-6 md:min-w-0 md:h-6 md:px-2 px-3 text-[10px] font-bold tracking-wider rounded-md ${currentWeekBlocks[0]?.targetType === 'seconds' ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted-foreground hover:text-white'}`}
+          >
+            AIKA
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => exercise.setBlocks.forEach(b => updateSetBlock(exercise.id, b.id, 'targetType', 'meters'))}
+            className={`min-h-[44px] min-w-[44px] md:min-h-6 md:min-w-0 md:h-6 md:px-2 px-3 text-[10px] font-bold tracking-wider rounded-md ${currentWeekBlocks[0]?.targetType === 'meters' ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted-foreground hover:text-white'}`}
+          >
+            MATKA
+          </Button>
+          <div className="hidden md:block w-px h-4 bg-white/10 mx-1"></div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => exercise.setBlocks.forEach(b => updateSetBlock(exercise.id, b.id, 'isBodyweight', !currentWeekBlocks[0]?.isBodyweight))}
+            className={`min-h-[44px] min-w-[44px] md:min-h-6 md:min-w-0 md:h-6 md:px-2 px-3 text-[10px] font-bold tracking-wider rounded-md ${currentWeekBlocks[0]?.isBodyweight ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted-foreground hover:text-white'}`}
+          >
+            BW
+          </Button>
+        </div>
+
+        <div className="hidden md:flex items-center gap-1 shrink-0">
           <Button
             variant="ghost"
             size="icon"
@@ -149,7 +172,7 @@ export default function ExerciseItem({
       <div className="p-4 space-y-4">
         {/* Table Headers */}
         {currentWeekBlocks.length > 0 && (
-          <div className="flex items-center gap-2 w-full px-2">
+          <div className="hidden md:flex items-center gap-2 w-full px-2">
             <div className="w-8 text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Sarja</div>
             <div className="flex-1 grid grid-cols-4 gap-2 text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               <div>Paino</div>

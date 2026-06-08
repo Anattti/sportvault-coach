@@ -41,7 +41,7 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
         {index + 1}
       </div>
       
-      <div className="flex-1 grid grid-cols-4 gap-2">
+      <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2">
         {/* Weight */}
         <div className="relative">
           <Input 
@@ -51,11 +51,11 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
             placeholder="-"
             disabled={block.isBodyweight}
             className={cn(
-              "h-10 bg-black/40 border-white/5 rounded-lg text-center font-bold focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary pr-6",
+              "h-10 bg-black/40 border-white/5 rounded-lg text-center font-bold focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary pr-8 md:pr-6",
               block.isBodyweight && "opacity-50"
             )}
           />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] uppercase text-muted-foreground font-bold pointer-events-none">
+          <span className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 text-[9px] md:text-[10px] uppercase text-muted-foreground font-bold pointer-events-none">
             {block.isBodyweight ? 'BW' : 'kg'}
           </span>
         </div>
@@ -67,9 +67,9 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
             onChange={(e) => handleNumericInput('reps', e.target.value, true)}
             inputMode="numeric"
             placeholder="-"
-            className="h-10 bg-black/40 border-white/5 rounded-lg text-center font-bold focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary pr-6"
+            className="h-10 bg-black/40 border-white/5 rounded-lg text-center font-bold focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary pr-8 md:pr-6"
           />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] uppercase text-muted-foreground font-bold pointer-events-none">
+          <span className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 text-[9px] md:text-[10px] uppercase text-muted-foreground font-bold pointer-events-none">
             {block.targetType === 'seconds' ? 's' : block.targetType === 'meters' ? 'm' : 'x'}
           </span>
         </div>
@@ -81,9 +81,9 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
             onChange={(e) => handleNumericInput('restTime', e.target.value, true)}
             inputMode="numeric"
             placeholder="60"
-            className="h-10 bg-black/40 border-white/5 rounded-lg text-center font-bold focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary pr-6"
+            className="h-10 bg-black/40 border-white/5 rounded-lg text-center font-bold focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary pr-8 md:pr-6"
           />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] uppercase text-muted-foreground font-bold pointer-events-none">
+          <span className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 text-[9px] md:text-[10px] uppercase text-muted-foreground font-bold pointer-events-none">
             s
           </span>
         </div>
@@ -95,20 +95,20 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
             onChange={(e) => handleNumericInput('targetRpe', e.target.value, false)}
             inputMode="decimal"
             placeholder="-"
-            className="h-10 bg-black/40 border-white/5 rounded-lg text-center font-bold focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary pr-8"
+            className="h-10 bg-black/40 border-white/5 rounded-lg text-center font-bold focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary pr-10 md:pr-8"
           />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] uppercase text-muted-foreground font-bold pointer-events-none">
+          <span className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 text-[9px] md:text-[10px] uppercase text-muted-foreground font-bold pointer-events-none">
             RPE
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setNotesVisible(!notesVisible)}
-          className={`w-8 h-8 rounded-full transition-colors ${notesVisible ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'}`}
+          className={`min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:w-8 md:h-8 rounded-full transition-colors ${notesVisible ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'}`}
         >
           <MessageSquare className="w-4 h-4" />
         </Button>
@@ -117,7 +117,7 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
           variant="ghost"
           size="icon"
           onClick={() => removeBlock(block.id)}
-          className="w-8 h-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:w-8 md:h-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
         >
           <X className="w-4 h-4" />
         </Button>

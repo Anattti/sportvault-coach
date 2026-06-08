@@ -157,4 +157,13 @@
     background-color: rgba(255, 255, 255, 0.06);
     border-color: rgba(255, 255, 255, 0.12);
   }
+
+}
+
+/* Minimum touch targets on mobile (44×44px per Apple HIG / WCAG) */
+@media (max-width: 767px) {
+  [data-slot="button"][data-size="icon"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }

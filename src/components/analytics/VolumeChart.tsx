@@ -20,8 +20,8 @@ export default function VolumeChart({ data }: VolumeChartProps) {
         <CardDescription>Nostettu kokonaiskuorma viikoittain (kg)</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-[300px] w-full min-w-0">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
               <XAxis 
