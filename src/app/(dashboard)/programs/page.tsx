@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import WorkoutUpdateMeta from '@/components/programs/WorkoutUpdateMeta';
+import { fetchAverageWorkoutDurations, formatWorkoutDurationMinutes } from '@/lib/workouts/duration';
 
 export default async function ProgramsPage() {
   const supabase = await createServerSupabaseClient();
@@ -37,6 +38,9 @@ export default async function ProgramsPage() {
     .eq('id', user.id)
     .maybeSingle();
 
+  const programRows = programs ?? [];
+  const averageDurations = await fetchAverageWorkoutDurations(supabase, programRows);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -68,7 +72,9 @@ export default async function ProgramsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {programs.map((prog) => (
+          {programRows.map((prog) => {
+            const avgDuration = averageDurations.get(prog.id) ?? prog.duration;
+            return (
             <Card key={prog.id} className="bg-card border-border hover:border-accent/50 transition-colors flex flex-col">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
@@ -86,7 +92,11 @@ export default async function ProgramsPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    <span>{Math.floor((prog.duration || 0) / 60)} min</span>
+                    <span>
+                      {avgDuration && avgDuration > 0
+                        ? `Ø ${formatWorkoutDurationMinutes(avgDuration)}`
+                        : '—'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Dumbbell className="h-4 w-4" />
@@ -107,7 +117,8 @@ export default async function ProgramsPage() {
                 </Button>
               </CardFooter>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

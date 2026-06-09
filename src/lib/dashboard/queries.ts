@@ -23,7 +23,7 @@ import {
   isRpeElevated,
 } from '@/lib/dashboard/metrics';
 import { getLastSeenAt } from '@/lib/dashboard/notifications';
-import { fetchNotedSessionIds } from '@/lib/sessions/format';
+import { fetchNotedSessionIds, fetchAthleteNoteSessionIds, enrichWithSessionNoteFlags } from '@/lib/sessions/format';
 import {
   AttentionClient,
   ClientOverview,
@@ -84,6 +84,7 @@ type SessionRow = {
   rpe_average: number | null;
   heart_rate_avg: number | null;
   heart_rate_max: number | null;
+  notes: string | null;
   cycle_week: number | null;
   workouts: {
     program: string | null;
@@ -345,6 +346,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
           rpe_average,
           heart_rate_avg,
           heart_rate_max,
+          notes,
           cycle_week,
           workouts ( program, workout_type, cycle_weeks, programmed_deloads )
         `)
@@ -401,6 +403,14 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       profilesById,
     );
     recentPRs = progress.recentPRs;
+    if (recentPRs.length > 0) {
+      const prSessionIds = recentPRs.map((record) => record.sessionId);
+      const [athleteNoteIds, coachNoteIds] = await Promise.all([
+        fetchAthleteNoteSessionIds(supabase, prSessionIds),
+        fetchNotedSessionIds(supabase, user.id, prSessionIds),
+      ]);
+      recentPRs = enrichWithSessionNoteFlags(recentPRs, athleteNoteIds, coachNoteIds);
+    }
     progressByClient = progress.progressByClient;
 
     const scheduledThisWeekByClient = new Map<string, number>();
@@ -643,14 +653,16 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
   const exerciseCountBySession = new Map<string, number>();
   let notedSessionIds = new Set<string>();
+  let athleteNoteSessionIds = new Set<string>();
 
   if (recentSessionIds.length > 0) {
-    const [{ data: exerciseRows }, notedIds] = await Promise.all([
+    const [{ data: exerciseRows }, notedIds, athleteNoteIds] = await Promise.all([
       supabase
         .from('session_exercises')
         .select('session_id')
         .in('session_id', recentSessionIds),
       fetchNotedSessionIds(supabase, user.id, recentSessionIds),
+      fetchAthleteNoteSessionIds(supabase, recentSessionIds),
     ]);
 
     for (const row of exerciseRows ?? []) {
@@ -661,6 +673,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       );
     }
     notedSessionIds = notedIds;
+    athleteNoteSessionIds = athleteNoteIds;
   }
 
   const recentSessions: CoachActivitySession[] = recentSlice.map((s) => ({
@@ -679,6 +692,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     workoutType: s.workouts?.workout_type ?? null,
     exerciseCount: exerciseCountBySession.get(s.id) ?? 0,
     hasCoachNote: notedSessionIds.has(s.id),
+    hasAthleteNote: athleteNoteSessionIds.has(s.id),
     cycleWeek: s.cycle_week,
     cycleWeeks: s.workouts?.cycle_weeks ?? null,
     isNew: newSessionIds.has(s.id),

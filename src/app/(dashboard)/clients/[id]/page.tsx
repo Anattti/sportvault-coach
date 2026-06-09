@@ -8,7 +8,8 @@ import ClientAttentionBanner from '@/components/clients/ClientAttentionBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trophy, Clock, BarChart3, Flame, AlertTriangle } from 'lucide-react';
-import { endOfWeek, format, formatDistanceToNow, parseISO, startOfWeek, subWeeks } from 'date-fns';
+import { endOfWeek, formatDistanceToNow, parseISO, startOfWeek, subWeeks } from 'date-fns';
+import { formatSessionDateTimeFi } from '@/lib/dates/fi';
 import { fi } from 'date-fns/locale';
 import { getClientAnalytics } from '@/lib/client-analytics/queries';
 import { getVolumeTrendLabel } from '@/lib/dashboard/metrics';
@@ -18,7 +19,7 @@ import {
   resolveCycleStatus,
 } from '@/lib/programs/cycle-status';
 import ActiveProgramCard from '@/components/programs/ActiveProgramCard';
-import { fetchNotedSessionIds, formatSessionSummaries } from '@/lib/sessions/format';
+import { fetchNotedSessionIds, fetchAthleteNoteSessionIds, formatSessionSummaries } from '@/lib/sessions/format';
 import { CoachClient } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -52,10 +53,15 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
         rpe_average,
         heart_rate_avg,
         heart_rate_max,
+        notes,
         cycle_week,
         workout_id,
         workouts ( program, workout_type, cycle_weeks, programmed_deloads ),
-        session_exercises ( id )
+        session_exercises (
+          id,
+          notes,
+          session_sets ( notes )
+        )
       `)
       .eq('user_id', clientId)
       .gte('date', eightWeeksAgo.toISOString())
@@ -169,13 +175,17 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
   const volumeTrend = getVolumeTrendLabel(thisWeekVolume, prev4WeekAvg);
 
   const recentSessionIds = sessionRows.slice(0, 5).map((s) => s.id);
-  const notedSessionIds = user
-    ? await fetchNotedSessionIds(supabase, user.id, recentSessionIds)
-    : new Set<string>();
+  const [notedSessionIds, athleteNoteSessionIds] = user
+    ? await Promise.all([
+        fetchNotedSessionIds(supabase, user.id, recentSessionIds),
+        fetchAthleteNoteSessionIds(supabase, recentSessionIds),
+      ])
+    : [new Set<string>(), new Set<string>()];
 
   const formattedSessions = formatSessionSummaries(
     sessionRows.slice(0, 5),
     notedSessionIds,
+    athleteNoteSessionIds,
   );
 
   const latestRpe = latestSession?.rpe_average;
@@ -196,7 +206,7 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {format(parseISO(latestSession.date), 'd.M.yyyy', { locale: fi })}
+            {formatSessionDateTimeFi(parseISO(latestSession.date))}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             {formatDistanceToNow(parseISO(latestSession.date), {

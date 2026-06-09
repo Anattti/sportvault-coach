@@ -1,4 +1,12 @@
-import { Activity, Clock, Dumbbell, CheckCircle2, TrendingUp } from 'lucide-react';
+import { Fragment } from 'react';
+import {
+  Activity,
+  CheckCircle2,
+  Clock,
+  Dumbbell,
+  MessageSquareText,
+  TrendingUp,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import KpiCard from '@/components/dashboard/KpiCard';
 import RpeBadge, { RpeKpiCard } from '@/components/sessions/RpeBadge';
@@ -9,9 +17,50 @@ import { cn } from '@/lib/utils';
 interface SessionDetailProps {
   data: SessionDetailType;
   previousBestByExercise?: Record<string, number>;
+  showAllSetColumns?: boolean;
 }
 
-export default function SessionDetail({ data, previousBestByExercise = {} }: SessionDetailProps) {
+function AthleteNoteBlock({
+  text,
+  className,
+  compact = false,
+}: {
+  text: string;
+  className?: string;
+  compact?: boolean;
+}) {
+  if (compact) {
+    return (
+      <p className={cn('flex items-start gap-2 text-xs text-muted-foreground', className)}>
+        <MessageSquareText className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+        <span className="italic leading-relaxed">&quot;{text}&quot;</span>
+      </p>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        'border-b border-white/8 bg-accent/[0.03] px-5 py-3',
+        className,
+      )}
+    >
+      <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-primary">
+        <MessageSquareText className="h-3 w-3 text-primary" />
+        Urheilijan muistiinpano
+      </p>
+      <p className="text-sm italic text-muted-foreground leading-relaxed">
+        &quot;{text}&quot;
+      </p>
+    </div>
+  );
+}
+
+export default function SessionDetail({
+  data,
+  previousBestByExercise = {},
+  showAllSetColumns = false,
+}: SessionDetailProps) {
   const { session, exercises } = data;
 
   const formatDuration = (seconds: number) => {
@@ -95,18 +144,15 @@ export default function SessionDetail({ data, previousBestByExercise = {} }: Ses
                       </Badge>
                     )}
                     {ex.notes && (
-                      <Badge variant="outline" className="border-accent text-accent">
-                        Huomioita
+                      <Badge variant="outline" className="border-primary/30 text-primary">
+                        <MessageSquareText className="mr-1 h-3 w-3" />
+                        Muistiinpano
                       </Badge>
                     )}
                   </div>
                 </div>
 
-                {ex.notes && (
-                  <div className="border-b border-white/8 bg-accent/[0.03] px-5 py-3 text-sm italic text-muted-foreground">
-                    &quot;{ex.notes}&quot;
-                  </div>
-                )}
+                {ex.notes && <AthleteNoteBlock text={ex.notes} />}
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -116,8 +162,22 @@ export default function SessionDetail({ data, previousBestByExercise = {} }: Ses
                         <th className="px-3 py-3 font-medium">Paino</th>
                         <th className="px-3 py-3 font-medium">Toistot</th>
                         <th className="px-3 py-3 font-medium">RPE</th>
-                        <th className="hidden sm:table-cell px-3 py-3 font-medium">e1RM</th>
-                        <th className="hidden sm:table-cell px-5 py-3 font-medium">Lepo</th>
+                        <th
+                          className={cn(
+                            'px-3 py-3 font-medium',
+                            !showAllSetColumns && 'hidden sm:table-cell',
+                          )}
+                        >
+                          e1RM
+                        </th>
+                        <th
+                          className={cn(
+                            'px-5 py-3 font-medium',
+                            !showAllSetColumns && 'hidden sm:table-cell',
+                          )}
+                        >
+                          Lepo
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
@@ -126,38 +186,58 @@ export default function SessionDetail({ data, previousBestByExercise = {} }: Ses
                           set.weightUsed && set.repsCompleted
                             ? calculateE1RM(set.weightUsed, set.repsCompleted)
                             : null;
+
                         return (
-                          <tr key={setIdx} className="transition-colors hover:bg-white/[0.02]">
-                            <td className="px-5 py-3.5">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium tabular-nums">{set.setIndex}</span>
-                                {set.completedAt && (
-                                  <CheckCircle2 className="h-3 w-3 text-primary" />
+                          <Fragment key={setIdx}>
+                            <tr className="transition-colors hover:bg-white/[0.02]">
+                              <td className="px-5 py-3.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium tabular-nums">{set.setIndex}</span>
+                                  {set.completedAt && (
+                                    <CheckCircle2 className="h-3 w-3 text-primary" />
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-3 py-3.5 font-semibold tabular-nums">
+                                {set.weightUsed !== null ? `${set.weightUsed} kg` : '—'}
+                              </td>
+                              <td className="px-3 py-3.5 font-semibold tabular-nums">
+                                {set.repsCompleted !== null ? set.repsCompleted : '—'}
+                              </td>
+                              <td className="px-3 py-3.5">
+                                {set.rpe != null ? (
+                                  <RpeBadge rpe={set.rpe} size="lg" />
+                                ) : (
+                                  '—'
                                 )}
-                              </div>
-                            </td>
-                            <td className="px-3 py-3.5 font-semibold tabular-nums">
-                              {set.weightUsed !== null ? `${set.weightUsed} kg` : '—'}
-                            </td>
-                            <td className="px-3 py-3.5 font-semibold tabular-nums">
-                              {set.repsCompleted !== null ? set.repsCompleted : '—'}
-                            </td>
-                            <td className="px-3 py-3.5">
-                              {set.rpe != null ? (
-                                <RpeBadge rpe={set.rpe} size="lg" />
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                            <td className="hidden sm:table-cell px-3 py-3.5 tabular-nums text-muted-foreground">
-                              {setE1RM ? `${setE1RM} kg` : '—'}
-                            </td>
-                            <td className="hidden sm:table-cell px-5 py-3.5 tabular-nums text-muted-foreground">
-                              {set.restTimeTaken
-                                ? `${Math.floor(set.restTimeTaken / 60)}m ${set.restTimeTaken % 60}s`
-                                : '—'}
-                            </td>
-                          </tr>
+                              </td>
+                              <td
+                                className={cn(
+                                  'px-3 py-3.5 tabular-nums text-muted-foreground',
+                                  !showAllSetColumns && 'hidden sm:table-cell',
+                                )}
+                              >
+                                {setE1RM ? `${setE1RM} kg` : '—'}
+                              </td>
+                              <td
+                                className={cn(
+                                  'px-5 py-3.5 tabular-nums text-muted-foreground',
+                                  !showAllSetColumns && 'hidden sm:table-cell',
+                                )}
+                              >
+                                {set.restTimeTaken
+                                  ? `${Math.floor(set.restTimeTaken / 60)}m ${set.restTimeTaken % 60}s`
+                                  : '—'}
+                              </td>
+                            </tr>
+                            {set.notes && (
+                              <tr className="bg-accent/[0.02]">
+                                <td colSpan={6} className="px-5 py-2 pb-3.5">
+                                  <AthleteNoteBlock text={set.notes} compact />
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
                         );
                       })}
                     </tbody>

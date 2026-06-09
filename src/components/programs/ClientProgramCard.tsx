@@ -96,7 +96,7 @@ export default function ClientProgramCard({
           <StatChip
             icon={Clock}
             label="Kesto"
-            value={durationMin > 0 ? `${durationMin} min` : '—'}
+            value={durationMin > 0 ? `Ø ${durationMin} min` : '—'}
           />
           <StatChip icon={Dumbbell} label="Liikkeet" value={String(exerciseCount)} />
         </div>

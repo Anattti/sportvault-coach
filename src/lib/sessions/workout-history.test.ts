@@ -29,6 +29,7 @@ function session(
     heartRateMax: null,
     exerciseCount: 5,
     hasCoachNote: false,
+    hasAthleteNote: false,
     cycleWeeks: 8,
     ...overrides,
   };

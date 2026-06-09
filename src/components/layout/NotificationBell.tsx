@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { fi } from 'date-fns/locale';
 import { Bell, CheckCheck, Dumbbell } from 'lucide-react';
+import SessionNoteIcons from '@/components/sessions/SessionNoteIcons';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { WorkoutNotification } from '@/types';
@@ -124,12 +125,19 @@ export default function NotificationBell({ notifications }: NotificationBellProp
                         {' · '}
                         {n.totalVolume.toLocaleString('fi-FI')} kg
                       </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground/70">
-                        {formatDistanceToNow(new Date(n.createdAt), {
-                          addSuffix: true,
-                          locale: fi,
-                        })}
-                      </p>
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <p className="text-[11px] text-muted-foreground/70">
+                          {formatDistanceToNow(new Date(n.createdAt), {
+                            addSuffix: true,
+                            locale: fi,
+                          })}
+                        </p>
+                        <SessionNoteIcons
+                          hasAthleteNote={n.hasAthleteNote}
+                          hasCoachNote={n.hasCoachNote}
+                          iconClassName="h-3 w-3"
+                        />
+                      </div>
                     </div>
                     <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary shadow-neon-sm" />
                   </Link>

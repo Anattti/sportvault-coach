@@ -1,5 +1,6 @@
-import { format } from 'date-fns';
-import { Activity, Flame, Dumbbell, StickyNote } from 'lucide-react';
+import { formatSessionDateTimeFi } from '@/lib/dates/fi';
+import { Activity, Flame, Dumbbell } from 'lucide-react';
+import SessionNoteIcons from '@/components/sessions/SessionNoteIcons';
 import { SessionSummary } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getWorkoutTypeConfig } from '@/lib/workouts/types';
@@ -50,15 +51,13 @@ export default function RecentActivityFeed({ sessions, clientId }: RecentActivit
                           cycleWeek={session.cycleWeek}
                           cycleWeeks={session.cycleWeeks}
                         />
-                        {session.hasCoachNote && (
-                          <StickyNote
-                            className="h-3.5 w-3.5 shrink-0 text-primary"
-                            aria-label="Valmentajan muistiinpano"
-                          />
-                        )}
+                        <SessionNoteIcons
+                          hasAthleteNote={session.hasAthleteNote}
+                          hasCoachNote={session.hasCoachNote}
+                        />
                       </div>
                       <p className="text-xs text-muted-foreground truncate flex items-center gap-1 flex-wrap">
-                        <span>{format(new Date(session.date), 'd.M.yyyy')}</span>
+                        <span>{formatSessionDateTimeFi(new Date(session.date))}</span>
                         <span>•</span>
                         <span>{Math.floor(session.duration / 60)} min</span>
                         {session.workoutType && (

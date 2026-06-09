@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { fi } from 'date-fns/locale';
 import { Trophy } from 'lucide-react';
+import SessionNoteIcons from '@/components/sessions/SessionNoteIcons';
 import { ClientPersonalRecord } from '@/types';
 
 interface PersonalRecordsTimelineProps {
@@ -43,7 +44,13 @@ export default function PersonalRecordsTimeline({
                 <Trophy className="h-4 w-4 text-primary" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-sm truncate">{pr.exerciseName}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-sm truncate">{pr.exerciseName}</p>
+                  <SessionNoteIcons
+                    hasAthleteNote={pr.hasAthleteNote}
+                    hasCoachNote={pr.hasCoachNote}
+                  />
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {format(new Date(pr.date), 'd.M.yyyy', { locale: fi })}
                 </p>

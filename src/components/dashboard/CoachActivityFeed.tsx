@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { format } from 'date-fns';
-import { fi } from 'date-fns/locale';
+import { formatSessionDateTimeShortFi } from '@/lib/dates/fi';
 import { Activity, ArrowRight, Dumbbell, Flame, Trophy } from 'lucide-react';
+import SessionNoteIcons from '@/components/sessions/SessionNoteIcons';
 import { CoachActivitySession, PersonalRecord } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -105,10 +105,14 @@ export default function CoachActivityFeed({
                           PR
                         </span>
                       )}
+                      <SessionNoteIcons
+                        hasAthleteNote={session.hasAthleteNote}
+                        hasCoachNote={session.hasCoachNote}
+                      />
                     </div>
                     <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Activity className="h-3 w-3 shrink-0 opacity-60" />
-                      {format(new Date(session.date), 'EEE d.M.', { locale: fi })}
+                      {formatSessionDateTimeShortFi(new Date(session.date))}
                       <span className="opacity-40">·</span>
                       {Math.floor(session.duration / 60)} min
                       {session.workoutName && (

@@ -1,6 +1,11 @@
 import { subWeeks } from 'date-fns';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import {
+  enrichWithSessionNoteFlags,
+  fetchAthleteNoteSessionIds,
+  fetchNotedSessionIds,
+} from '@/lib/sessions/format';
+import {
   buildProgramContextMap,
   getCurrentWeekBounds,
   isDateInCurrentWeek,
@@ -126,7 +131,17 @@ export async function getClientAnalytics(
 
   const { currentStart } = getPeriodBounds(periodWeeks, now);
   const exerciseProgress = buildExerciseProgressTable(analyticsSessions, periodWeeks);
-  const personalRecords = findAllPersonalRecords(analyticsSessions, currentStart);
+  const personalRecordsRaw = findAllPersonalRecords(analyticsSessions, currentStart);
+  const recordSessionIds = personalRecordsRaw.map((record) => record.sessionId);
+  const [athleteNoteSessionIds, coachNoteSessionIds] = await Promise.all([
+    fetchAthleteNoteSessionIds(supabase, recordSessionIds),
+    fetchNotedSessionIds(supabase, coachId, recordSessionIds),
+  ]);
+  const personalRecords = enrichWithSessionNoteFlags(
+    personalRecordsRaw,
+    athleteNoteSessionIds,
+    coachNoteSessionIds,
+  );
   const volumeChangePercent = computeVolumeChangePercent(sessionRows, periodWeeks);
   const compliancePercent = getThisWeekCompliance(
     sessionRows,

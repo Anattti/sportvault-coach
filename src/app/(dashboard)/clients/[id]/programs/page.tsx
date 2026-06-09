@@ -9,6 +9,7 @@ import {
   buildUpdaterNicknameMap,
   collectWorkoutEditorIds,
 } from '@/lib/workouts/update-meta';
+import { fetchAverageWorkoutDurations } from '@/lib/workouts/duration';
 
 export default async function ClientProgramsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -42,6 +43,8 @@ export default async function ClientProgramsPage({ params }: { params: Promise<{
     ? await supabase.from('user_profiles').select('id, nickname').in('id', editorIds)
     : { data: [] };
   const updaterNicknames = buildUpdaterNicknameMap(editorProfiles);
+
+  const averageDurations = await fetchAverageWorkoutDurations(supabase, programRows);
 
   const { data: coachTemplates } = await supabase
     .from('workouts')
@@ -111,7 +114,7 @@ export default async function ClientProgramsPage({ params }: { params: Promise<{
               clientId={clientId}
               program={prog.program}
               workoutType={prog.workout_type}
-              duration={prog.duration}
+              duration={averageDurations.get(prog.id) ?? prog.duration}
               cycleWeeks={prog.cycle_weeks}
               exerciseCount={prog.exercises?.[0]?.count ?? 0}
               managedByCoach={prog.managed_by_coach ?? false}

@@ -10,7 +10,7 @@ import {
   WorkoutHistoryMeta,
   WorkoutHistorySession,
 } from '@/types';
-import { fetchNotedSessionIds, formatSessionSummaries } from '@/lib/sessions/format';
+import { fetchNotedSessionIds, fetchAthleteNoteSessionIds, formatSessionSummaries } from '@/lib/sessions/format';
 
 export function isNewCycleRun(
   previous: SessionSummary | null,
@@ -174,9 +174,10 @@ type SessionWithExercises = WorkoutHistorySessionRow & {
   session_exercises?: RawSessionExercise[] | null;
 };
 
-type RawSetRow = NonNullable<RawSessionExercise['session_sets']>[number];
-
-export function resolveDisplaySetIndex(sets: RawSetRow[], index: number): number {
+export function resolveDisplaySetIndex(
+  sets: Array<{ set_index: number | null }>,
+  index: number,
+): number {
   const usesZeroBased = sets.every((set) => (set.set_index ?? 0) === 0);
   if (usesZeroBased) return index + 1;
 
@@ -373,6 +374,17 @@ export function buildExerciseHistory(
     });
 }
 
+function buildSessionNotesById(
+  sessions: SessionSummary[],
+): Record<string, { hasAthleteNote: boolean; hasCoachNote: boolean }> {
+  return Object.fromEntries(
+    sessions.map((session) => [
+      session.id,
+      { hasAthleteNote: session.hasAthleteNote, hasCoachNote: session.hasCoachNote },
+    ]),
+  );
+}
+
 export function buildWorkoutHistoryData(
   sessions: SessionSummary[],
   meta: Omit<
@@ -432,6 +444,7 @@ export function buildWorkoutHistoryData(
         (a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime(),
       ),
       exercises,
+      sessionNotesById: buildSessionNotesById(enriched),
     };
   }
 
@@ -448,6 +461,7 @@ export function buildWorkoutHistoryData(
     isFlatTimeline: false,
     flatSessions: [],
     exercises,
+    sessionNotesById: buildSessionNotesById(enriched),
   };
 }
 
@@ -471,10 +485,12 @@ type WorkoutHistorySessionRow = {
   session_exercises?: RawSessionExercise[] | null;
 };
 
+type SupabaseClient = Awaited<
+  ReturnType<typeof import('@/lib/supabase/server').createServerSupabaseClient>
+> | ReturnType<typeof import('@/lib/supabase/client').createClient>;
+
 export async function fetchWorkoutHistory(
-  supabase: Awaited<
-    ReturnType<typeof import('@/lib/supabase/server').createServerSupabaseClient>
-  >,
+  supabase: SupabaseClient,
   coachId: string,
   clientId: string,
   workoutId: string,
@@ -500,6 +516,7 @@ export async function fetchWorkoutHistory(
         rpe_average,
         heart_rate_avg,
         heart_rate_max,
+        notes,
         cycle_week,
         workout_id,
         workouts ( program, workout_type, cycle_weeks, programmed_deloads ),
@@ -509,12 +526,14 @@ export async function fetchWorkoutHistory(
           order_index,
           exercise_id,
           is_ad_hoc,
+          notes,
           session_sets (
             id,
             set_index,
             weight_used,
             reps_completed,
-            rpe
+            rpe,
+            notes
           )
         )
       `)
@@ -529,15 +548,17 @@ export async function fetchWorkoutHistory(
   ]);
 
   const rows = (sessionRows ?? []) as SessionWithExercises[];
-  if (rows.length === 0) return null;
 
-  const notedSessionIds = await fetchNotedSessionIds(
-    supabase,
-    coachId,
-    rows.map((row) => row.id),
-  );
+  const sessionIds = rows.map((row) => row.id);
+  const [notedSessionIds, athleteNoteSessionIds] =
+    sessionIds.length > 0
+      ? await Promise.all([
+          fetchNotedSessionIds(supabase, coachId, sessionIds),
+          fetchAthleteNoteSessionIds(supabase, sessionIds),
+        ])
+      : [new Set<string>(), new Set<string>()];
 
-  const summaries = formatSessionSummaries(rows, notedSessionIds);
+  const summaries = formatSessionSummaries(rows, notedSessionIds, athleteNoteSessionIds);
 
   return buildWorkoutHistoryData(
     summaries,

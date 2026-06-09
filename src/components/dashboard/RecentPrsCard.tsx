@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { fi } from 'date-fns/locale';
 import { Medal, Trophy } from 'lucide-react';
+import SessionNoteIcons from '@/components/sessions/SessionNoteIcons';
 import { PersonalRecord } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -53,9 +54,15 @@ export default function RecentPrsCard({ records }: RecentPrsCardProps) {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {record.clientNickname}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {record.clientNickname}
+                    </p>
+                    <SessionNoteIcons
+                      hasAthleteNote={record.hasAthleteNote}
+                      hasCoachNote={record.hasCoachNote}
+                    />
+                  </div>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
                     {record.exerciseName}
                     {' · '}

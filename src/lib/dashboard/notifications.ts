@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { subDays } from 'date-fns';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { WorkoutNotification } from '@/types';
+import { fetchAthleteNoteSessionIds, fetchNotedSessionIds } from '@/lib/sessions/format';
 
 export const LAST_SEEN_COOKIE = 'sv_coach_last_seen';
 
@@ -59,15 +60,22 @@ export async function getWorkoutNotifications(): Promise<WorkoutNotification[]> 
     .order('created_at', { ascending: false })
     .limit(20);
 
-  return (sessions ?? [])
-    .filter((s) => s.user_id)
-    .map((s) => ({
-      id: s.id,
-      clientId: s.user_id!,
-      clientNickname: profilesById.get(s.user_id!) ?? 'Nimetön urheilija',
-      workoutName: (s.workouts as { program: string | null } | null)?.program ?? null,
-      date: s.date ?? s.created_at ?? new Date().toISOString(),
-      totalVolume: s.total_volume ?? 0,
-      createdAt: s.created_at ?? new Date().toISOString(),
-    }));
+  const sessionList = (sessions ?? []).filter((s) => s.user_id);
+  const sessionIds = sessionList.map((s) => s.id);
+  const [athleteNoteSessionIds, coachNoteSessionIds] = await Promise.all([
+    fetchAthleteNoteSessionIds(supabase, sessionIds),
+    fetchNotedSessionIds(supabase, user.id, sessionIds),
+  ]);
+
+  return sessionList.map((s) => ({
+    id: s.id,
+    clientId: s.user_id!,
+    clientNickname: profilesById.get(s.user_id!) ?? 'Nimetön urheilija',
+    workoutName: (s.workouts as { program: string | null } | null)?.program ?? null,
+    date: s.date ?? s.created_at ?? new Date().toISOString(),
+    totalVolume: s.total_volume ?? 0,
+    createdAt: s.created_at ?? new Date().toISOString(),
+    hasAthleteNote: athleteNoteSessionIds.has(s.id),
+    hasCoachNote: coachNoteSessionIds.has(s.id),
+  }));
 }

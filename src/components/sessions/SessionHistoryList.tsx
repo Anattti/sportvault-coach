@@ -8,14 +8,16 @@ import {
   formatMonthYearFi,
   formatWeekdayShortFi,
   formatDateFi,
+  formatTimeFi,
+  hasMeaningfulSessionTime,
 } from '@/lib/dates/fi';
 import {
   Activity,
   ChevronRight,
   Flame,
   History,
-  StickyNote,
 } from 'lucide-react';
+import SessionNoteIcons from '@/components/sessions/SessionNoteIcons';
 import { SessionSummary } from '@/types';
 import { primaryActiveClassName } from '@/config/navigation';
 import { getWorkoutTypeConfig } from '@/lib/workouts/types';
@@ -25,9 +27,14 @@ import { cn } from '@/lib/utils';
 interface SessionHistoryListProps {
   sessions: SessionSummary[];
   clientId: string;
+  variant?: 'full' | 'compact';
+  onSessionSelect?: (sessionId: string) => void;
+  compactLimit?: number;
 }
 
 type FilterValue = 'all' | `year:${number}` | '3m' | '6m' | '12m';
+
+const DEFAULT_COMPACT_LIMIT = 20;
 
 function getAvailableYears(sessions: SessionSummary[]): number[] {
   const years = new Set<number>();
@@ -86,26 +93,158 @@ function buildFilterOptions(years: number[]): Array<{ value: FilterValue; label:
   ];
 }
 
-export default function SessionHistoryList({ sessions, clientId }: SessionHistoryListProps) {
+function CompactSessionRow({
+  session,
+  clientId,
+  onSessionSelect,
+}: {
+  session: SessionSummary;
+  clientId: string;
+  onSessionSelect?: (sessionId: string) => void;
+}) {
+  const date = parseISO(session.date);
+  const interactive = Boolean(onSessionSelect);
+
+  const content = (
+    <>
+      <div className="flex min-w-0 flex-1 items-start gap-2.5">
+        <div className="flex w-10 shrink-0 flex-col items-center rounded-lg bg-white/[0.04] py-1 ring-1 ring-white/8">
+          <span className="text-[9px] font-semibold uppercase text-muted-foreground">
+            {formatWeekdayShortFi(date)}
+          </span>
+          <span className="text-sm font-bold tabular-nums leading-none">{date.getDate()}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="truncate text-sm font-medium text-foreground">
+              {session.workoutName || 'Nimetön treeni'}
+            </p>
+            <SessionCycleBadge
+              cycleWeek={session.cycleWeek}
+              cycleWeeks={session.cycleWeeks}
+              className="text-[9px]"
+            />
+            <SessionNoteIcons
+              hasAthleteNote={session.hasAthleteNote}
+              hasCoachNote={session.hasCoachNote}
+              className="gap-0.5"
+            />
+          </div>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            {formatDateFi(date)}
+            {hasMeaningfulSessionTime(date) && (
+              <span> · klo {formatTimeFi(date)}</span>
+            )}
+            <span> · {Math.floor(session.duration / 60)} min</span>
+            {session.rpeAverage != null && (
+              <span> · RPE {session.rpeAverage.toFixed(1)}</span>
+            )}
+          </p>
+        </div>
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="text-xs font-semibold tabular-nums">
+          {session.totalVolume.toLocaleString('fi-FI')} kg
+        </p>
+      </div>
+    </>
+  );
+
+  if (interactive) {
+    return (
+      <button
+        type="button"
+        onClick={() => onSessionSelect?.(session.id)}
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04]"
+      >
+        {content}
+        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="relative flex items-center gap-2 px-3 py-2.5 transition-colors hover:bg-white/[0.03] group">
+      <Link
+        href={`/clients/${clientId}/sessions/${session.id}`}
+        className="absolute inset-0 z-0"
+        aria-label={`Avaa treeni ${session.workoutName ?? 'Nimetön treeni'}`}
+      />
+      <div className="relative z-10 flex w-full items-center gap-2 pointer-events-none">
+        {content}
+      </div>
+    </div>
+  );
+}
+
+export default function SessionHistoryList({
+  sessions,
+  clientId,
+  variant = 'full',
+  onSessionSelect,
+  compactLimit = DEFAULT_COMPACT_LIMIT,
+}: SessionHistoryListProps) {
+  const isCompact = variant === 'compact';
   const years = useMemo(() => getAvailableYears(sessions), [sessions]);
   const filterOptions = useMemo(() => buildFilterOptions(years), [years]);
   const [filter, setFilter] = useState<FilterValue>('all');
+  const [showAllCompact, setShowAllCompact] = useState(false);
 
   const filteredSessions = useMemo(
     () => filterSessions(sessions, filter),
     [sessions, filter],
   );
 
+  const compactSessions = useMemo(() => {
+    if (!isCompact || showAllCompact) return filteredSessions;
+    return filteredSessions.slice(0, compactLimit);
+  }, [filteredSessions, isCompact, showAllCompact, compactLimit]);
+
   const groupedSessions = useMemo(
-    () => groupByMonth(filteredSessions),
-    [filteredSessions],
+    () => (isCompact ? [] : groupByMonth(filteredSessions)),
+    [filteredSessions, isCompact],
   );
 
   if (sessions.length === 0) {
     return (
-      <div className="glass-panel rounded-2xl p-12 text-center text-muted-foreground">
-        <Activity className="mx-auto h-8 w-8 mb-3 opacity-30" />
+      <div
+        className={cn(
+          'text-center text-muted-foreground',
+          isCompact ? 'px-2 py-6 text-sm' : 'glass-panel rounded-2xl p-12',
+        )}
+      >
+        {!isCompact && <Activity className="mx-auto h-8 w-8 mb-3 opacity-30" />}
         <p>Ei treenihistoriaa vielä.</p>
+      </div>
+    );
+  }
+
+  if (isCompact) {
+    return (
+      <div className="space-y-2">
+        <p className="px-1 text-xs text-muted-foreground">
+          {filteredSessions.length}{' '}
+          {filteredSessions.length === 1 ? 'treeni' : 'treeniä'}
+        </p>
+        <div className="divide-y divide-white/5 overflow-hidden rounded-xl ring-1 ring-white/8">
+          {compactSessions.map((session) => (
+            <CompactSessionRow
+              key={session.id}
+              session={session}
+              clientId={clientId}
+              onSessionSelect={onSessionSelect}
+            />
+          ))}
+        </div>
+        {!showAllCompact && filteredSessions.length > compactLimit && (
+          <button
+            type="button"
+            onClick={() => setShowAllCompact(true)}
+            className="w-full py-2 text-xs font-medium text-primary hover:underline"
+          >
+            Näytä kaikki ({filteredSessions.length})
+          </button>
+        )}
       </div>
     );
   }
@@ -204,11 +343,20 @@ export default function SessionHistoryList({ sessions, clientId }: SessionHistor
                           cycleWeek={session.cycleWeek}
                           cycleWeeks={session.cycleWeeks}
                         />
-                        {session.hasCoachNote && (
-                          <StickyNote className="h-3.5 w-3.5 shrink-0 text-primary" aria-label="Valmentajan muistiinpano" />
-                        )}
+                        <SessionNoteIcons
+                          hasAthleteNote={session.hasAthleteNote}
+                          hasCoachNote={session.hasCoachNote}
+                        />
                       </div>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                        {hasMeaningfulSessionTime(parseISO(session.date)) && (
+                          <>
+                            <span className="tabular-nums">
+                              klo {formatTimeFi(parseISO(session.date))}
+                            </span>
+                            <span className="opacity-40">·</span>
+                          </>
+                        )}
                         <span>{Math.floor(session.duration / 60)} min</span>
                         {session.exerciseCount > 0 && (
                           <>

@@ -54,6 +54,8 @@ export interface PersonalRecord {
   improvementPercent: number;
   sessionId: string;
   date: string;
+  hasAthleteNote?: boolean;
+  hasCoachNote?: boolean;
 }
 
 export interface ClientPersonalRecord {
@@ -63,6 +65,8 @@ export interface ClientPersonalRecord {
   improvementPercent: number;
   sessionId: string;
   date: string;
+  hasAthleteNote?: boolean;
+  hasCoachNote?: boolean;
 }
 
 export interface ExerciseProgressRow {
@@ -165,6 +169,8 @@ export interface WorkoutNotification {
   date: string;
   totalVolume: number;
   createdAt: string;
+  hasAthleteNote: boolean;
+  hasCoachNote: boolean;
 }
 
 export interface WeeklyVolumePoint {
@@ -201,6 +207,7 @@ export interface SessionSummary {
   heartRateMax: number | null;
   exerciseCount: number;
   hasCoachNote: boolean;
+  hasAthleteNote: boolean;
   cycleWeek: number | null;
   cycleWeeks: number | null;
 }
@@ -267,6 +274,7 @@ export interface WorkoutHistoryData {
   isFlatTimeline: boolean;
   flatSessions: WorkoutHistorySession[];
   exercises: WorkoutExerciseHistory[];
+  sessionNotesById: Record<string, { hasAthleteNote: boolean; hasCoachNote: boolean }>;
 }
 
 // Treenisession täysi data (detail-näkymä)

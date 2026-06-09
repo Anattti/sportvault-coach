@@ -1,18 +1,40 @@
-'use client';
+import { notFound } from 'next/navigation';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import WorkoutPlanner from '@/components/workout/WorkoutPlanner';
+import { fetchClientSessionSummaries } from '@/lib/sessions/queries';
+import { fetchWorkoutHistory } from '@/lib/sessions/workout-history';
 
-import { useParams } from 'next/navigation';
-import WorkoutBuilder from '@/components/workout/WorkoutBuilder';
+export default async function EditClientProgramPage({
+  params,
+}: {
+  params: Promise<{ id: string; workoutId: string }>;
+}) {
+  const { id: clientId, workoutId } = await params;
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-export default function EditClientProgramPage() {
-  const params = useParams();
-  const clientId = params.id as string;
-  const workoutId = params.workoutId as string;
+  if (!user) return null;
+
+  const [sessionSummaries, workoutHistory] = await Promise.all([
+    fetchClientSessionSummaries(supabase, clientId, user.id),
+    fetchWorkoutHistory(supabase, user.id, clientId, workoutId),
+  ]);
+
+  if (!workoutHistory) {
+    notFound();
+  }
 
   return (
-    <WorkoutBuilder
+    <WorkoutPlanner
       mode="client"
       workoutId={workoutId}
       targetUserId={clientId}
+      coachId={user.id}
+      clientId={clientId}
+      sessionSummaries={sessionSummaries}
+      workoutHistory={workoutHistory}
       returnPath={`/clients/${clientId}/programs`}
       title="Muokkaa asiakkaan treeniä"
     />

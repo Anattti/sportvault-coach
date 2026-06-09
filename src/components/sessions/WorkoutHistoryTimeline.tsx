@@ -3,17 +3,20 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { parseISO } from 'date-fns';
-import { BatteryLow, Dumbbell, TrendingDown, TrendingUp, Trophy } from 'lucide-react';
+import { BatteryLow, Dumbbell, MessageSquareText, TrendingDown, TrendingUp, Trophy } from 'lucide-react';
 import { formatCycleWeekLabel } from '@/lib/sessions/format';
-import { formatDateFi } from '@/lib/dates/fi';
+import { formatSessionDateTimeFi } from '@/lib/dates/fi';
 import { primaryActiveClassName } from '@/config/navigation';
 import RpeBadge from '@/components/sessions/RpeBadge';
+import SessionNoteIcons from '@/components/sessions/SessionNoteIcons';
 import { WorkoutExerciseHistory, WorkoutExerciseSetRow, WorkoutHistoryData } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface WorkoutHistoryTimelineProps {
   data: WorkoutHistoryData;
   clientId: string;
+  variant?: 'full' | 'embedded';
+  onSessionSelect?: (sessionId: string) => void;
 }
 
 type ExerciseFilter = 'all' | 'program';
@@ -146,6 +149,10 @@ function TableLegend({ showInferredNote }: { showInferredNote: boolean }) {
         <Trophy className="h-3 w-3 text-primary" aria-hidden="true" />
         Ennätys e1RM
       </span>
+      <span className="inline-flex items-center gap-1.5">
+        <MessageSquareText className="h-3 w-3 text-primary" aria-hidden="true" />
+        Urheilijan muistiinpano
+      </span>
       {showInferredNote && (
         <span>
           <span className="text-primary">*</span> = viikko päätelty
@@ -155,16 +162,57 @@ function TableLegend({ showInferredNote }: { showInferredNote: boolean }) {
   );
 }
 
+function SessionDateLink({
+  sessionId,
+  clientId,
+  dateLabel,
+  embedded,
+  onSessionSelect,
+}: {
+  sessionId: string;
+  clientId: string;
+  dateLabel: string;
+  embedded: boolean;
+  onSessionSelect?: (sessionId: string) => void;
+}) {
+  if (embedded && onSessionSelect) {
+    return (
+      <button
+        type="button"
+        onClick={() => onSessionSelect(sessionId)}
+        className="font-medium tabular-nums text-foreground transition-colors hover:text-primary hover:underline"
+      >
+        {dateLabel}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      href={`/clients/${clientId}/sessions/${sessionId}`}
+      className="font-medium tabular-nums text-foreground transition-colors hover:text-primary hover:underline"
+    >
+      {dateLabel}
+    </Link>
+  );
+}
+
 function ExerciseHistoryTable({
   exercise,
   clientId,
   programmedDeloads,
   showInferredNote,
+  sessionNotesById,
+  embedded,
+  onSessionSelect,
 }: {
   exercise: WorkoutExerciseHistory;
   clientId: string;
   programmedDeloads: number[];
   showInferredNote: boolean;
+  sessionNotesById: WorkoutHistoryData['sessionNotesById'];
+  embedded: boolean;
+  onSessionSelect?: (sessionId: string) => void;
 }) {
   const sessionWeightChanges = useMemo(
     () => buildSessionWeightChangePercent(exercise.rows),
@@ -174,21 +222,37 @@ function ExerciseHistoryTable({
   return (
     <section
       aria-labelledby={`exercise-${exercise.name}`}
-      className="glass-panel rounded-2xl overflow-hidden"
+      className={cn(
+        'overflow-hidden',
+        embedded ? 'rounded-xl ring-1 ring-white/8' : 'glass-panel rounded-2xl',
+      )}
     >
-      <div className="flex flex-col gap-2 border-b border-white/8 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div
+        className={cn(
+          'flex flex-col gap-2 border-b border-white/8 sm:flex-row sm:items-center sm:justify-between',
+          embedded ? 'px-3 py-2.5' : 'px-5 py-4',
+        )}
+      >
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
-            <Dumbbell className="h-4 w-4 text-primary" />
+          <div
+            className={cn(
+              'flex shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20',
+              embedded ? 'h-6 w-6' : 'h-8 w-8',
+            )}
+          >
+            <Dumbbell className={cn('text-primary', embedded ? 'h-3 w-3' : 'h-4 w-4')} />
           </div>
           <div className="min-w-0">
             <h3
               id={`exercise-${exercise.name}`}
-              className="truncate text-base font-semibold text-foreground"
+              className={cn(
+                'truncate font-semibold text-foreground',
+                embedded ? 'text-sm' : 'text-base',
+              )}
             >
               {exercise.name}
             </h3>
-            <p className="text-xs text-muted-foreground">
+            <p className={cn('text-muted-foreground', embedded ? 'text-[10px]' : 'text-xs')}>
               {exercise.sessionCount}{' '}
               {exercise.sessionCount === 1 ? 'suoritus' : 'suoritusta'}
               {exercise.bestE1rm != null && (
@@ -203,16 +267,23 @@ function ExerciseHistoryTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className={cn('w-full', embedded ? 'min-w-[520px] text-xs' : 'min-w-[640px] text-sm')}>
           <thead>
-            <tr className="sticky top-0 z-10 border-b border-white/8 bg-[#121212]/95 text-left text-[11px] uppercase tracking-wider text-muted-foreground backdrop-blur-md">
-              <th className="px-4 py-3 font-medium">Viikko</th>
-              <th className="px-3 py-3 font-medium">Päivä</th>
-              <th className="px-3 py-3 font-medium">Sarja</th>
-              <th className="px-3 py-3 font-medium">Paino</th>
-              <th className="px-3 py-3 font-medium">Toistot</th>
-              <th className="px-3 py-3 font-medium">RPE</th>
-              <th className="hidden sm:table-cell px-4 py-3 font-medium">e1RM</th>
+            <tr
+              className={cn(
+                'sticky top-0 z-10 border-b border-white/8 bg-[#121212]/95 text-left uppercase tracking-wider text-muted-foreground backdrop-blur-md',
+                embedded ? 'text-[10px]' : 'text-[11px]',
+              )}
+            >
+              <th className={cn('font-medium', embedded ? 'px-2 py-2' : 'px-4 py-3')}>Viikko</th>
+              <th className={cn('font-medium', embedded ? 'px-2 py-2' : 'px-3 py-3')}>Päivä</th>
+              <th className={cn('font-medium', embedded ? 'px-2 py-2' : 'px-3 py-3')}>Sarja</th>
+              <th className={cn('font-medium', embedded ? 'px-2 py-2' : 'px-3 py-3')}>Paino</th>
+              <th className={cn('font-medium', embedded ? 'px-2 py-2' : 'px-3 py-3')}>Toistot</th>
+              <th className={cn('font-medium', embedded ? 'px-2 py-2' : 'px-3 py-3')}>RPE</th>
+              <th className={cn('hidden sm:table-cell font-medium', embedded ? 'px-2 py-2' : 'px-4 py-3')}>
+                e1RM
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -238,7 +309,7 @@ function ExerciseHistoryTable({
                     'hover:bg-white/[0.04]',
                   )}
                 >
-                  <td className="px-4 py-3">
+                  <td className={embedded ? 'px-2 py-2' : 'px-4 py-3'}>
                     {isSessionStart ? (
                       <WeekBadge row={row} isDeload={isDeload} />
                     ) : (
@@ -247,15 +318,20 @@ function ExerciseHistoryTable({
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className={embedded ? 'px-2 py-2' : 'px-3 py-3'}>
                     {isSessionStart ? (
                       <span className="inline-flex flex-wrap items-center">
-                        <Link
-                          href={`/clients/${clientId}/sessions/${row.sessionId}`}
-                          className="font-medium tabular-nums text-foreground transition-colors hover:text-primary hover:underline"
-                        >
-                          {formatDateFi(parseISO(row.date))}
-                        </Link>
+                        <SessionDateLink
+                          sessionId={row.sessionId}
+                          clientId={clientId}
+                          dateLabel={formatSessionDateTimeFi(parseISO(row.date))}
+                          embedded={embedded}
+                          onSessionSelect={onSessionSelect}
+                        />
+                        <SessionNoteIcons
+                          className="ml-1.5"
+                          {...(sessionNotesById[row.sessionId] ?? {})}
+                        />
                         <WeightChangeChip percent={weightChange} />
                       </span>
                     ) : (
@@ -264,21 +340,40 @@ function ExerciseHistoryTable({
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-3">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.04] text-xs font-semibold tabular-nums text-muted-foreground ring-1 ring-white/8">
+                  <td className={embedded ? 'px-2 py-2' : 'px-3 py-3'}>
+                    <span
+                      className={cn(
+                        'inline-flex items-center justify-center rounded-md bg-white/[0.04] font-semibold tabular-nums text-muted-foreground ring-1 ring-white/8',
+                        embedded ? 'h-5 w-5 text-[10px]' : 'h-6 w-6 text-xs',
+                      )}
+                    >
                       {row.displaySetIndex}
                     </span>
                   </td>
-                  <td className="px-3 py-3 font-semibold tabular-nums text-foreground">
+                  <td
+                    className={cn(
+                      'font-semibold tabular-nums text-foreground',
+                      embedded ? 'px-2 py-2' : 'px-3 py-3',
+                    )}
+                  >
                     {row.weightUsed != null ? `${row.weightUsed} kg` : '—'}
                   </td>
-                  <td className="px-3 py-3 font-semibold tabular-nums text-foreground/90">
+                  <td
+                    className={cn(
+                      'font-semibold tabular-nums text-foreground/90',
+                      embedded ? 'px-2 py-2' : 'px-3 py-3',
+                    )}
+                  >
                     {row.repsCompleted != null ? row.repsCompleted : '—'}
                   </td>
-                  <td className="px-3 py-3">
-                    {row.rpe != null ? <RpeBadge rpe={row.rpe} size="md" /> : '—'}
+                  <td className={embedded ? 'px-2 py-2' : 'px-3 py-3'}>
+                    {row.rpe != null ? (
+                      <RpeBadge rpe={row.rpe} size="md" />
+                    ) : (
+                      '—'
+                    )}
                   </td>
-                  <td className="hidden sm:table-cell px-4 py-3">
+                  <td className={cn('hidden sm:table-cell', embedded ? 'px-2 py-2' : 'px-4 py-3')}>
                     {row.e1rm != null ? (
                       <span
                         className={cn(
@@ -304,7 +399,7 @@ function ExerciseHistoryTable({
         </table>
       </div>
 
-      <TableLegend showInferredNote={showInferredNote} />
+      {!embedded && <TableLegend showInferredNote={showInferredNote} />}
     </section>
   );
 }
@@ -312,8 +407,11 @@ function ExerciseHistoryTable({
 export default function WorkoutHistoryTimeline({
   data,
   clientId,
+  variant = 'full',
+  onSessionSelect,
 }: WorkoutHistoryTimelineProps) {
-  const { meta, exercises } = data;
+  const embedded = variant === 'embedded';
+  const { meta, exercises, sessionNotesById } = data;
   const showCycleFilter = hasMultiWeekProgram(meta.cycleWeeks);
   const [filter, setFilter] = useState<ExerciseFilter>(() =>
     showCycleFilter && exercises.some((exercise) => exercise.isProgramExercise)
@@ -335,30 +433,42 @@ export default function WorkoutHistoryTimeline({
 
   if (meta.totalSessions === 0) {
     return (
-      <div className="glass-panel rounded-2xl p-12 text-center text-muted-foreground">
+      <div
+        className={cn(
+          'text-center text-muted-foreground',
+          embedded ? 'px-2 py-4 text-xs' : 'glass-panel rounded-2xl p-12',
+        )}
+      >
         <p>Ei suorituksia tälle treenille.</p>
-        <Link
-          href={`/clients/${clientId}/programs`}
-          className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
-        >
-          Siirry ohjelmiin
-        </Link>
+        {!embedded && (
+          <Link
+            href={`/clients/${clientId}/programs`}
+            className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
+          >
+            Siirry ohjelmiin
+          </Link>
+        )}
       </div>
     );
   }
 
   if (exercises.length === 0) {
     return (
-      <div className="glass-panel rounded-2xl p-12 text-center text-muted-foreground">
+      <div
+        className={cn(
+          'text-center text-muted-foreground',
+          embedded ? 'px-2 py-4 text-xs' : 'glass-panel rounded-2xl p-12',
+        )}
+      >
         <p>Ei liiketietoja tälle treenille.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className={embedded ? 'space-y-3' : 'space-y-6'}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="px-1 text-sm text-muted-foreground">
+        <p className={cn('px-1 text-muted-foreground', embedded ? 'text-xs' : 'text-sm')}>
           {filteredExercises.length}{' '}
           {filteredExercises.length === 1 ? 'liike' : 'liikettä'}
           {activeFilter === 'program' && ' ohjelmasta'}
@@ -411,6 +521,9 @@ export default function WorkoutHistoryTimeline({
             clientId={clientId}
             programmedDeloads={meta.programmedDeloads}
             showInferredNote={showCycleFilter}
+            sessionNotesById={sessionNotesById}
+            embedded={embedded}
+            onSessionSelect={onSessionSelect}
           />
         ))
       )}

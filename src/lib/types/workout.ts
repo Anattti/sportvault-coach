@@ -34,3 +34,17 @@ export interface ExerciseCategory {
   label: string;
   icon?: React.ElementType;
 }
+
+export type WeekViewMode = 'focused' | 'all';
+
+export interface ApplyExerciseFromHistoryPayload {
+  name: string;
+  sets: Array<{
+    weight: string;
+    reps: string;
+    targetRpe?: string;
+    restTime?: string;
+    isBodyweight?: boolean;
+    targetType?: TargetType;
+  }>;
+}
