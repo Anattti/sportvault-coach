@@ -173,7 +173,7 @@ export async function getClientAnalytics(
     ...new Set(sessionRows.map((s) => s.workout_id).filter(Boolean) as string[]),
   ];
 
-  let prescriptionsByWorkoutId = new Map<string, PrescriptionExerciseRow[]>();
+  const prescriptionsByWorkoutId = new Map<string, PrescriptionExerciseRow[]>();
 
   if (workoutIds.length > 0) {
     const { data: prescriptionData } = await supabase

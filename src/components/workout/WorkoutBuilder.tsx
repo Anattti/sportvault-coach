@@ -32,12 +32,14 @@ export interface WorkoutBuilderProps {
   title: string;
   coachId?: string;
   variant?: 'standalone' | 'content-only';
+  hideMobileActionBar?: boolean;
   onLoadingChange?: (loading: boolean) => void;
   onExercisesChange?: (exercises: ExerciseData[]) => void;
 }
 
 export interface WorkoutBuilderHandle {
   save: () => void;
+  addExercise: () => void;
   applyExerciseFromHistory: (payload: ApplyExerciseFromHistoryPayload) => void;
   getExerciseNames: () => string[];
 }
@@ -56,6 +58,7 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
       title,
       coachId,
       variant = 'standalone',
+      hideMobileActionBar = false,
       onLoadingChange,
       onExercisesChange,
     },
@@ -436,11 +439,12 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
       ref,
       () => ({
         save: handleSave,
+        addExercise: addManualExercise,
         applyExerciseFromHistory,
         getExerciseNames: () =>
           exercises.map((ex) => ex.name.trim()).filter(Boolean),
       }),
-      [handleSave, applyExerciseFromHistory, exercises],
+      [handleSave, addManualExercise, applyExerciseFromHistory, exercises],
     );
 
     if (initialLoading) {
@@ -502,6 +506,20 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
         />
 
         <Button
+          type="button"
+          onClick={handleSave}
+          disabled={loading}
+          className="h-12 w-full bg-primary text-primary-foreground shadow-neon-sm hover:bg-primary/90 lg:hidden"
+        >
+          {loading ? (
+            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-1.5 h-4 w-4" />
+          )}
+          Tallenna
+        </Button>
+
+        <Button
           onClick={addManualExercise}
           variant="outline"
           className="hidden w-full rounded-xl border-dashed py-8 glass-panel-hover lg:flex"
@@ -511,30 +529,17 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
       </div>
     );
 
-    const mobileActionBar = (
+    const mobileActionBar = hideMobileActionBar ? null : (
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-background/95 p-3 backdrop-blur-md lg:hidden">
         <div className="mx-auto flex max-w-lg gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={addManualExercise}
-            className="h-11 flex-1 border-white/10 bg-white/[0.03]"
+            className="h-11 w-full border-white/10 bg-white/[0.03]"
           >
             <Plus className="mr-1.5 h-4 w-4" />
             Liike
-          </Button>
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={loading}
-            className="h-11 flex-1 bg-primary text-primary-foreground shadow-neon-sm hover:bg-primary/90"
-          >
-            {loading ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-1.5 h-4 w-4" />
-            )}
-            Tallenna
           </Button>
         </div>
       </div>

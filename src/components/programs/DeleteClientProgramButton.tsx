@@ -9,7 +9,6 @@ import { useRouter } from 'next/navigation';
 
 export default function DeleteClientProgramButton({
   workoutId,
-  clientId,
 }: {
   workoutId: string;
   clientId: string;

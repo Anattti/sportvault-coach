@@ -46,9 +46,9 @@ export function buildAdherenceSummary(
 
   let totalPrescribedSets = 0;
   let totalCompletedSets = 0;
-  let weightDeviations: number[] = [];
-  let repsDeviations: number[] = [];
-  let rpeDeviations: number[] = [];
+  const weightDeviations: number[] = [];
+  const repsDeviations: number[] = [];
+  const rpeDeviations: number[] = [];
   let totalExercises = 0;
   let swappedCount = 0;
   let adHocCount = 0;

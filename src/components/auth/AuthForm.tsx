@@ -23,6 +23,19 @@ interface AuthFormProps {
   defaultTab?: "login" | "register";
 }
 
+function getUrlAuthError(): string | null {
+  if (typeof window === 'undefined') return null;
+
+  const authError = new URLSearchParams(window.location.search).get('error');
+  if (authError === 'missing_supabase_env') {
+    return 'Sovelluksen Supabase-asetukset puuttuvat. Tarkista ympäristömuuttujat.';
+  }
+  if (authError === 'auth_callback_error' || authError === 'auth_confirm_error') {
+    return 'Kirjautumislinkki vanhentui tai on virheellinen. Pyydä uusi palautuslinkki.';
+  }
+  return null;
+}
+
 function formatAuthError(err: unknown, fallback: string): string {
   if (err instanceof Error) {
     if (err.message.includes('No API key found') || err.message.includes('ympäristömuuttujat')) {
@@ -51,7 +64,7 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
   const [businessName, setBusinessName] = React.useState("");
   
   const [isLoading, setIsLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(getUrlAuthError);
 
   const [forgotPasswordOpen, setForgotPasswordOpen] = React.useState(false);
   const [resetEmail, setResetEmail] = React.useState("");
@@ -60,17 +73,6 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
   const [resetSuccess, setResetSuccess] = React.useState(false);
 
   const isRegistering = activeTab === "register"
-
-  React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const authError = params.get('error');
-
-    if (authError === 'missing_supabase_env') {
-      setError('Sovelluksen Supabase-asetukset puuttuvat. Tarkista ympäristömuuttujat.');
-    } else if (authError === 'auth_callback_error' || authError === 'auth_confirm_error') {
-      setError('Kirjautumislinkki vanhentui tai on virheellinen. Pyydä uusi palautuslinkki.');
-    }
-  }, []);
 
   const handleTabChange = (tab: "login" | "register") => {
     setActiveTab(tab);

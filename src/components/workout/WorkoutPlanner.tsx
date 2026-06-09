@@ -1,14 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, History, Loader2, Pin, PinOff, Save } from 'lucide-react';
+import { ChevronLeft, History, Loader2, Pin, PinOff, Plus, Save } from 'lucide-react';
 import WorkoutBuilder, {
   WorkoutBuilderHandle,
   WorkoutBuilderProps,
 } from '@/components/workout/WorkoutBuilder';
-import PlanningHistoryPanel from '@/components/workout/PlanningHistoryPanel';
+import PlanningHistoryPanel, {
+  PlanningHistoryNavState,
+} from '@/components/workout/PlanningHistoryPanel';
 import ResizableHistoryAside from '@/components/workout/ResizableHistoryAside';
+import { groupSessionsByWorkout } from '@/lib/sessions/workout-programs';
 import { ApplyExerciseFromHistoryPayload, ExerciseData } from '@/lib/types/workout';
 import { SessionSummary, WorkoutHistoryData } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -65,11 +68,24 @@ export default function WorkoutPlanner({
 }: WorkoutPlannerProps) {
   const router = useRouter();
   const builderRef = useRef<WorkoutBuilderHandle>(null);
+  const historyScrollRef = useRef<HTMLDivElement>(null);
+  const savedHistoryScrollTopRef = useRef(0);
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyPinned, setHistoryPinned] = useState(readHistoryPinnedPreference);
   const [isLargeScreen, setIsLargeScreen] = useState(readIsLargeScreen);
   const [suggestedExerciseNames, setSuggestedExerciseNames] = useState<string[]>([]);
+
+  const programs = useMemo(
+    () => groupSessionsByWorkout(sessionSummaries),
+    [sessionSummaries],
+  );
+
+  const [historyNavState, setHistoryNavState] = useState<PlanningHistoryNavState>(() => ({
+    activeTab: 'workouts',
+    selectedWorkoutId: workoutId ?? programs[0]?.workoutId ?? null,
+    selectedExerciseName: null,
+  }));
 
   const setPinnedHistory = useCallback((next: boolean | ((prev: boolean) => boolean)) => {
     setHistoryPinned((prev) => {
@@ -106,6 +122,20 @@ export default function WorkoutPlanner({
     setHistoryOpen(false);
   };
 
+  const handleHistoryOpenChange = useCallback((open: boolean) => {
+    if (!open && historyScrollRef.current) {
+      savedHistoryScrollTopRef.current = historyScrollRef.current.scrollTop;
+    }
+    setHistoryOpen(open);
+    if (open) {
+      requestAnimationFrame(() => {
+        if (historyScrollRef.current) {
+          historyScrollRef.current.scrollTop = savedHistoryScrollTopRef.current;
+        }
+      });
+    }
+  }, []);
+
   const showPinnedHistory = historyPinned && isLargeScreen;
 
   const historyPanel = (
@@ -115,8 +145,40 @@ export default function WorkoutPlanner({
       clientId={clientId}
       workoutId={workoutId}
       suggestedExerciseNames={suggestedExerciseNames}
+      navState={historyNavState}
+      onNavStateChange={setHistoryNavState}
       onApplyFromHistory={handleApplyFromHistory}
     />
+  );
+
+  const mobileActionBar = (
+    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-background/95 p-3 backdrop-blur-md lg:hidden">
+      <div className="mx-auto flex max-w-lg gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => builderRef.current?.addExercise()}
+          className="h-11 flex-1 border-white/10 bg-white/[0.03]"
+        >
+          <Plus className="mr-1.5 h-4 w-4" />
+          Liike
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => handleHistoryOpenChange(true)}
+          className="h-11 flex-1 border-white/10 bg-white/[0.03]"
+        >
+          <History className="mr-1.5 h-4 w-4 text-primary" />
+          Historia
+          {sessionSummaries.length > 0 && (
+            <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 px-1.5 text-[10px]">
+              {sessionSummaries.length}
+            </Badge>
+          )}
+        </Button>
+      </div>
+    </div>
   );
 
   return (
@@ -137,15 +199,15 @@ export default function WorkoutPlanner({
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+          <Sheet open={historyOpen} onOpenChange={handleHistoryOpenChange}>
             <SheetTrigger
               render={
                 <Button
                   variant="outline"
                   size="sm"
                   className={cn(
-                    'border-white/10 bg-white/[0.03] text-muted-foreground hover:text-foreground',
-                    showPinnedHistory && 'hidden',
+                    'hidden border-white/10 bg-white/[0.03] text-muted-foreground hover:text-foreground lg:inline-flex',
+                    showPinnedHistory && 'lg:hidden',
                   )}
                 />
               }
@@ -163,12 +225,17 @@ export default function WorkoutPlanner({
             </SheetTrigger>
             <SheetContent
               side="left"
-              className="w-full overflow-y-auto sm:max-w-lg lg:max-w-xl"
+              className="flex w-full flex-col gap-0 p-0 sm:max-w-lg lg:max-w-xl"
             >
-              <SheetHeader>
+              <SheetHeader className="shrink-0 border-b border-white/8">
                 <SheetTitle>Treenihistoria</SheetTitle>
               </SheetHeader>
-              <div className="px-4 pb-6">{historyPanel}</div>
+              <div
+                ref={historyScrollRef}
+                className="flex-1 overflow-y-auto px-4 pb-6 pt-4"
+              >
+                {historyPanel}
+              </div>
             </SheetContent>
           </Sheet>
 
@@ -209,6 +276,7 @@ export default function WorkoutPlanner({
           <WorkoutBuilder
             ref={builderRef}
             variant="content-only"
+            hideMobileActionBar
             title={title}
             returnPath={returnPath}
             workoutId={workoutId}
@@ -218,6 +286,8 @@ export default function WorkoutPlanner({
           />
         </div>
       </div>
+
+      {mobileActionBar}
     </div>
   );
 }

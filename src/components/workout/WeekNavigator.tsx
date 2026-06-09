@@ -46,7 +46,7 @@ export default function WeekNavigator({
   const activeWeekIsDeload = programmedDeloads.includes(activeCycleWeek);
 
   return (
-    <div className="sticky top-0 z-10 space-y-3 rounded-2xl border border-white/10 bg-background/95 p-3 backdrop-blur-sm md:p-4">
+    <div className="z-0 space-y-3 rounded-2xl border border-white/10 bg-background/95 p-3 backdrop-blur-sm md:p-4 lg:sticky lg:top-0 lg:z-10">
       {/* Viikot — aina oma rivi, ei päällekkäisyyksiä */}
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {Array.from({ length: cycleWeeks }).map((_, i) => {

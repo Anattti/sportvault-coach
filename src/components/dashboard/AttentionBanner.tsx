@@ -1,6 +1,4 @@
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
-import { fi } from 'date-fns/locale';
 import { AlertTriangle, ClipboardList, Flame, RotateCcw, TrendingUp } from 'lucide-react';
 import { AttentionClient } from '@/types';
 import { cn } from '@/lib/utils';
@@ -59,31 +57,6 @@ function getAttentionHref(client: AttentionClient): string {
     return `/clients/${client.clientId}/programs`;
   }
   return `/clients/${client.clientId}`;
-}
-
-function getShortDetail(client: AttentionClient): string {
-  if (client.detail) return client.detail;
-
-  switch (client.reason) {
-    case 'inactive':
-      return client.lastSessionDate
-        ? formatDistanceToNow(new Date(client.lastSessionDate), { addSuffix: false, locale: fi })
-        : 'ei treenihistoriaa';
-    case 'no_sessions':
-      return 'ei treenejä';
-    case 'pending':
-      return 'odottaa';
-    case 'high_rpe':
-      return 'RPE korkea';
-    case 'volume_spike':
-      return 'volyymi ↑';
-    case 'no_program':
-      return 'ei ohjelmaa';
-    case 'program_stuck':
-      return 'jumissa';
-    default:
-      return '';
-  }
 }
 
 export default function AttentionBanner({ clients }: AttentionBannerProps) {

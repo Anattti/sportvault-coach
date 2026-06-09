@@ -22,17 +22,25 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 
+export type PlanningHistoryTab = 'workouts' | 'exercises';
+
+export interface PlanningHistoryNavState {
+  activeTab: PlanningHistoryTab;
+  selectedWorkoutId: string | null;
+  selectedExerciseName: string | null;
+}
+
 interface PlanningHistoryPanelProps {
   sessionSummaries: SessionSummary[];
   workoutHistory?: WorkoutHistoryData | null;
   clientId: string;
   workoutId?: string;
   suggestedExerciseNames?: string[];
+  navState?: PlanningHistoryNavState;
+  onNavStateChange?: (state: PlanningHistoryNavState) => void;
   onApplyFromHistory?: (payload: ApplyExerciseFromHistoryPayload) => void;
   className?: string;
 }
-
-type HistoryTab = 'workouts' | 'exercises';
 
 function getInitialWorkoutId(
   programs: ReturnType<typeof groupSessionsByWorkout>,
@@ -48,6 +56,8 @@ export default function PlanningHistoryPanel({
   clientId,
   workoutId,
   suggestedExerciseNames = [],
+  navState,
+  onNavStateChange,
   onApplyFromHistory,
   className,
 }: PlanningHistoryPanelProps) {
@@ -70,11 +80,14 @@ export default function PlanningHistoryPanel({
     return [...names];
   }, [suggestedExerciseNames, programExerciseNames]);
 
-  const [activeTab, setActiveTab] = useState<HistoryTab>('workouts');
-  const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(() =>
+  const [internalActiveTab, setInternalActiveTab] = useState<PlanningHistoryTab>('workouts');
+  const [internalSelectedWorkoutId, setInternalSelectedWorkoutId] = useState<string | null>(() =>
     getInitialWorkoutId(programs, workoutId),
   );
-  const [history, setHistory] = useState<WorkoutHistoryData | null>(null);
+  const [fetchedHistory, setFetchedHistory] = useState<{
+    workoutId: string;
+    data: WorkoutHistoryData | null;
+  } | null>(null);
   const [workoutLoading, setWorkoutLoading] = useState(false);
   const [workoutError, setWorkoutError] = useState<string | null>(null);
 
@@ -82,34 +95,66 @@ export default function PlanningHistoryPanel({
     Awaited<ReturnType<typeof fetchClientExerciseOptions>>
   >([]);
   const [exerciseOptionsLoading, setExerciseOptionsLoading] = useState(false);
-  const [selectedExerciseName, setSelectedExerciseName] = useState<string | null>(null);
-  const [exerciseHistory, setExerciseHistory] = useState<ExerciseSessionHistoryData | null>(null);
+  const [internalSelectedExerciseName, setInternalSelectedExerciseName] = useState<string | null>(
+    null,
+  );
+
+  const isControlled = navState !== undefined && onNavStateChange !== undefined;
+  const activeTab = isControlled ? navState.activeTab : internalActiveTab;
+  const selectedWorkoutId = isControlled
+    ? navState.selectedWorkoutId
+    : internalSelectedWorkoutId;
+  const selectedExerciseName = isControlled
+    ? navState.selectedExerciseName
+    : internalSelectedExerciseName;
+
+  const updateNavState = (patch: Partial<PlanningHistoryNavState>) => {
+    if (isControlled) {
+      onNavStateChange({ ...navState, ...patch });
+    } else {
+      if (patch.activeTab !== undefined) setInternalActiveTab(patch.activeTab);
+      if (patch.selectedWorkoutId !== undefined) {
+        setInternalSelectedWorkoutId(patch.selectedWorkoutId);
+      }
+      if (patch.selectedExerciseName !== undefined) {
+        setInternalSelectedExerciseName(patch.selectedExerciseName);
+      }
+    }
+  };
+  const [fetchedExerciseHistory, setFetchedExerciseHistory] = useState<{
+    exerciseName: string;
+    data: ExerciseSessionHistoryData | null;
+  } | null>(null);
   const [exerciseLoading, setExerciseLoading] = useState(false);
   const [exerciseError, setExerciseError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (workoutId) return;
-    if (programs.length === 0) {
-      setSelectedWorkoutId(null);
-      return;
+  const resolvedWorkoutId = useMemo(() => {
+    if (workoutId) return workoutId;
+    if (programs.length === 0) return null;
+    if (selectedWorkoutId && programs.some((program) => program.workoutId === selectedWorkoutId)) {
+      return selectedWorkoutId;
     }
-    setSelectedWorkoutId((current) => {
-      if (current && programs.some((p) => p.workoutId === current)) return current;
-      return programs[0]?.workoutId ?? null;
-    });
-  }, [programs, workoutId]);
+    return programs[0]?.workoutId ?? null;
+  }, [workoutId, programs, selectedWorkoutId]);
+
+  const history = useMemo(() => {
+    if (!resolvedWorkoutId) return null;
+    if (workoutHistory?.meta.workoutId === resolvedWorkoutId) return workoutHistory;
+    if (fetchedHistory?.workoutId === resolvedWorkoutId) return fetchedHistory.data;
+    return null;
+  }, [resolvedWorkoutId, workoutHistory, fetchedHistory]);
+
+  const exerciseHistory = useMemo(() => {
+    if (!selectedExerciseName) return null;
+    if (fetchedExerciseHistory?.exerciseName === selectedExerciseName) {
+      return fetchedExerciseHistory.data;
+    }
+    return null;
+  }, [selectedExerciseName, fetchedExerciseHistory]);
 
   useEffect(() => {
-    if (!selectedWorkoutId) {
-      setHistory(null);
-      return;
-    }
-
-    if (workoutHistory && selectedWorkoutId === workoutHistory.meta.workoutId) {
-      setHistory(workoutHistory);
-      setWorkoutError(null);
-      return;
-    }
+    if (!resolvedWorkoutId) return;
+    if (workoutHistory?.meta.workoutId === resolvedWorkoutId) return;
 
     let cancelled = false;
 
@@ -125,20 +170,20 @@ export default function PlanningHistoryPanel({
           supabase,
           authData.user.id,
           clientId,
-          selectedWorkoutId,
+          resolvedWorkoutId,
         );
 
         if (cancelled) return;
 
         if (!result) {
-          setHistory(null);
+          setFetchedHistory({ workoutId: resolvedWorkoutId, data: null });
           setWorkoutError('Treenin historiaa ei löytynyt.');
         } else {
-          setHistory(result);
+          setFetchedHistory({ workoutId: resolvedWorkoutId, data: result });
         }
       } catch {
         if (!cancelled) {
-          setHistory(null);
+          setFetchedHistory({ workoutId: resolvedWorkoutId, data: null });
           setWorkoutError('Treenin historian haku epäonnistui.');
         }
       } finally {
@@ -151,7 +196,7 @@ export default function PlanningHistoryPanel({
     return () => {
       cancelled = true;
     };
-  }, [selectedWorkoutId, workoutHistory, clientId, supabase]);
+  }, [resolvedWorkoutId, workoutHistory, clientId, supabase]);
 
   useEffect(() => {
     let cancelled = false;
@@ -174,10 +219,7 @@ export default function PlanningHistoryPanel({
   }, [clientId, supabase]);
 
   useEffect(() => {
-    if (!selectedExerciseName) {
-      setExerciseHistory(null);
-      return;
-    }
+    if (!selectedExerciseName) return;
 
     let cancelled = false;
 
@@ -199,14 +241,14 @@ export default function PlanningHistoryPanel({
         if (cancelled) return;
 
         if (!result) {
-          setExerciseHistory(null);
+          setFetchedExerciseHistory({ exerciseName: selectedExerciseName, data: null });
           setExerciseError('Liikehistoriaa ei löytynyt.');
         } else {
-          setExerciseHistory(result);
+          setFetchedExerciseHistory({ exerciseName: selectedExerciseName, data: result });
         }
       } catch {
         if (!cancelled) {
-          setExerciseHistory(null);
+          setFetchedExerciseHistory({ exerciseName: selectedExerciseName, data: null });
           setExerciseError('Liikehistorian haku epäonnistui.');
         }
       } finally {
@@ -221,10 +263,10 @@ export default function PlanningHistoryPanel({
     };
   }, [selectedExerciseName, clientId, supabase]);
 
-  const selectedProgram = programs.find((p) => p.workoutId === selectedWorkoutId);
+  const selectedProgram = programs.find((program) => program.workoutId === resolvedWorkoutId);
   const selectedTitle =
     selectedProgram?.workoutName ??
-    (history?.meta.workoutId === selectedWorkoutId ? history.meta.programName : null);
+    (history?.meta.workoutId === resolvedWorkoutId ? history.meta.programName : null);
 
   if (sessionSummaries.length === 0) {
     return (
@@ -245,7 +287,7 @@ export default function PlanningHistoryPanel({
       <div className="flex gap-1 rounded-lg bg-white/5 p-1 ring-1 ring-white/8">
         <button
           type="button"
-          onClick={() => setActiveTab('workouts')}
+          onClick={() => updateNavState({ activeTab: 'workouts' })}
           className={cn(
             'flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold transition-all',
             activeTab === 'workouts'
@@ -258,7 +300,7 @@ export default function PlanningHistoryPanel({
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('exercises')}
+          onClick={() => updateNavState({ activeTab: 'exercises' })}
           className={cn(
             'flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold transition-all',
             activeTab === 'exercises'
@@ -276,13 +318,13 @@ export default function PlanningHistoryPanel({
           <section>
             <WorkoutProgramPicker
               programs={programs}
-              selectedWorkoutId={selectedWorkoutId}
-              onSelect={setSelectedWorkoutId}
+              selectedWorkoutId={resolvedWorkoutId}
+              onSelect={(id) => updateNavState({ selectedWorkoutId: id })}
               activeWorkoutId={workoutId}
             />
           </section>
 
-          {selectedWorkoutId && (
+          {resolvedWorkoutId && (
             <section className="space-y-3">
               {selectedTitle && (
                 <div className="px-1">
@@ -334,7 +376,7 @@ export default function PlanningHistoryPanel({
             <ExercisePicker
               exercises={exerciseOptions}
               selectedExerciseName={selectedExerciseName}
-              onSelect={setSelectedExerciseName}
+              onSelect={(name) => updateNavState({ selectedExerciseName: name })}
               suggestedNames={mergedSuggestedNames}
             />
           )}

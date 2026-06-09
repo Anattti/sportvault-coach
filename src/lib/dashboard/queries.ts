@@ -307,7 +307,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     string,
     { exerciseName: string; currentE1RM: number; trend: 'up' | 'down' | 'stable' } | null
   >();
-  let assignmentWorkoutByClient = new Map<
+  const assignmentWorkoutByClient = new Map<
     string,
     {
       program: string | null;
@@ -315,7 +315,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       programmed_deloads: number[] | null;
     }
   >();
-  let managedWorkoutByClient = new Map<
+  const managedWorkoutByClient = new Map<
     string,
     {
       program: string | null;

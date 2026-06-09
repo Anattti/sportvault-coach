@@ -1,5 +1,4 @@
 import { DevelopmentSummary, ExerciseProgressRow } from '@/types';
-import { computeVolumeChangePercent } from './load';
 import { computeStrengthChangePercent } from './progress';
 
 function trendFromPercent(percent: number | null): 'up' | 'down' | 'neutral' {
