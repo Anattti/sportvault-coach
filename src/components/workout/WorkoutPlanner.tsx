@@ -104,6 +104,18 @@ export default function WorkoutPlanner({
     [effectiveSummaries],
   );
 
+  const completedWeekCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (const run of workoutHistory?.cycleRuns ?? []) {
+      for (const week of run.weeks) {
+        if (!week.isEmpty) {
+          counts[week.cycleWeek] = (counts[week.cycleWeek] ?? 0) + week.sessions.length;
+        }
+      }
+    }
+    return counts;
+  }, [workoutHistory?.cycleRuns]);
+
   const [historyNavState, setHistoryNavState] = useState<PlanningHistoryNavState>(() => ({
     activeTab: 'workouts',
     selectedWorkoutId: historyWorkoutId ?? programs[0]?.workoutId ?? null,
@@ -360,6 +372,7 @@ export default function WorkoutPlanner({
             returnPath={returnPath}
             workoutId={workoutId}
             coachId={coachId}
+            completedWeekCounts={completedWeekCounts}
             onLoadingChange={setSaving}
             onExercisesChange={handleExercisesChange}
             {...builderProps}

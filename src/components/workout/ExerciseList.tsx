@@ -35,6 +35,7 @@ interface Props {
   activeCycleWeek: number;
   weekViewMode: WeekViewMode;
   syncSetsAcrossWeeks: boolean;
+  completedWeekCounts?: Record<number, number>;
   exerciseSuggestions?: ExerciseNameSuggestion[];
   onApplySetsToExercise?: (
     exerciseId: string,
@@ -61,6 +62,7 @@ export default function ExerciseList({
   activeCycleWeek,
   weekViewMode,
   syncSetsAcrossWeeks,
+  completedWeekCounts,
   exerciseSuggestions = [],
   onApplySetsToExercise,
   onFetchSetsForSuggestion,
@@ -266,6 +268,7 @@ export default function ExerciseList({
                 activeCycleWeek={activeCycleWeek}
                 weekViewMode={weekViewMode}
                 collapsedWeeks={effectiveCollapsedWeeks}
+                completedWeekCounts={completedWeekCounts}
                 onToggleWeek={toggleWeek}
                 updateExercise={updateExercise}
                 removeExercise={removeExercise}

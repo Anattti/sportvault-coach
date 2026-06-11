@@ -39,6 +39,7 @@ export interface WorkoutBuilderProps {
   returnPath: string;
   title: string;
   coachId?: string;
+  completedWeekCounts?: Record<number, number>;
   variant?: 'standalone' | 'content-only';
   hideMobileActionBar?: boolean;
   onLoadingChange?: (loading: boolean) => void;
@@ -66,6 +67,7 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
       returnPath,
       title,
       coachId,
+      completedWeekCounts,
       variant = 'standalone',
       hideMobileActionBar = false,
       onLoadingChange,
@@ -592,6 +594,7 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
           setWeekViewMode={setWeekViewMode}
           syncSetsAcrossWeeks={syncSetsAcrossWeeks}
           setSyncSetsAcrossWeeks={setSyncSetsAcrossWeeks}
+          completedWeekCounts={completedWeekCounts}
           onCopyWeek={copyWeek}
         />
 
@@ -603,6 +606,7 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
           activeCycleWeek={activeCycleWeek}
           weekViewMode={weekViewMode}
           syncSetsAcrossWeeks={syncSetsAcrossWeeks}
+          completedWeekCounts={completedWeekCounts}
           exerciseSuggestions={exerciseSuggestions}
           onApplySetsToExercise={applySetsToExercise}
           onFetchSetsForSuggestion={fetchSetsForSuggestion}

@@ -1,6 +1,6 @@
 'use client';
 
-import { BatteryLow, Copy, Layers, LayoutList } from 'lucide-react';
+import { BatteryLow, CheckCircle2, Copy, Layers, LayoutList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { WeekViewMode } from '@/lib/types/workout';
@@ -17,6 +17,7 @@ interface Props {
   setWeekViewMode: (mode: WeekViewMode) => void;
   syncSetsAcrossWeeks: boolean;
   setSyncSetsAcrossWeeks: (val: boolean) => void;
+  completedWeekCounts?: Record<number, number>;
   onCopyWeek: (fromWeek: number, toWeek: number) => void;
 }
 
@@ -31,6 +32,7 @@ export default function WeekNavigator({
   setWeekViewMode,
   syncSetsAcrossWeeks,
   setSyncSetsAcrossWeeks,
+  completedWeekCounts,
   onCopyWeek,
 }: Props) {
   if (cycleWeeks <= 1) return null;
@@ -53,6 +55,7 @@ export default function WeekNavigator({
           const week = i + 1;
           const isActive = activeCycleWeek === week;
           const isDeload = programmedDeloads.includes(week);
+          const completedCount = completedWeekCounts?.[week] ?? 0;
 
           return (
             <div key={week} className="group relative shrink-0">
@@ -73,6 +76,19 @@ export default function WeekNavigator({
                   />
                 )}
                 <span className="text-sm font-bold">Vko {week}</span>
+                {completedCount > 0 && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                      isActive
+                        ? 'bg-black/15 text-black'
+                        : 'bg-emerald-500/15 text-emerald-400',
+                    )}
+                  >
+                    <CheckCircle2 size={10} />
+                    Tehty{completedCount > 1 ? ` ${completedCount}` : ''}
+                  </span>
+                )}
               </button>
               <button
                 type="button"

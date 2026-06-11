@@ -10,7 +10,7 @@ import {
   WeekViewMode,
 } from '@/lib/types/workout';
 import { useState } from 'react';
-import { GripVertical, Plus, Trash2, MessageSquare, BatteryLow, ChevronDown, Loader2 } from 'lucide-react';
+import { GripVertical, Plus, Trash2, MessageSquare, BatteryLow, ChevronDown, Loader2, CheckCircle2 } from 'lucide-react';
 import ExerciseNameAutocomplete from '@/components/workout/ExerciseNameAutocomplete';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +25,7 @@ interface Props {
   activeCycleWeek: number;
   weekViewMode: WeekViewMode;
   collapsedWeeks: Set<number>;
+  completedWeekCounts?: Record<number, number>;
   onToggleWeek: (week: number) => void;
   updateExercise: <K extends keyof ExerciseData>(id: string, field: K, value: ExerciseData[K]) => void;
   removeExercise: (id: string) => void;
@@ -48,6 +49,7 @@ export default function ExerciseItem({
   activeCycleWeek,
   weekViewMode,
   collapsedWeeks,
+  completedWeekCounts,
   onToggleWeek,
   updateExercise,
   removeExercise,
@@ -91,10 +93,10 @@ export default function ExerciseItem({
     <>
       {blocks.length > 0 && (
         <div className="hidden w-full items-center gap-2 px-2 md:flex">
-          <div className="w-8 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <div className="w-8 text-center text-[10px] font-bold uppercase tracking-wider text-white/45">
             Sarja
           </div>
-          <div className="grid flex-1 grid-cols-4 gap-2 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <div className="grid flex-1 grid-cols-4 gap-2 text-center text-[10px] font-bold uppercase tracking-wider text-white/45">
             <div className="min-w-[80px]">Paino</div>
             <div className="min-w-[70px]">Tavoite</div>
             <div className="min-w-[60px]">Tauko</div>
@@ -344,16 +346,14 @@ export default function ExerciseItem({
             const isDeload = programmedDeloads.includes(week);
             const weekStyle = getCycleWeekStyle(week, isDeload);
             const isCollapsed = collapsedWeeks.has(week);
+            const completedCount = completedWeekCounts?.[week] ?? 0;
 
             return (
               <div
                 key={week}
                 className={cn(
-                  'overflow-hidden rounded-xl border transition-colors',
-                  week === activeCycleWeek
-                    ? cn('border-primary/30 ring-1', weekStyle.ring)
-                    : 'border-white/10',
-                  weekStyle.bg,
+                  'overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] transition-colors',
+                  week === activeCycleWeek && cn('ring-1', weekStyle.ring, weekStyle.border),
                   groupIndex > 0 && 'mt-1',
                 )}
               >
@@ -361,14 +361,14 @@ export default function ExerciseItem({
                   type="button"
                   onClick={() => onToggleWeek(week)}
                   className={cn(
-                    'flex w-full items-center gap-2 border-b border-white/5 px-3 py-2 text-left transition-colors hover:bg-white/[0.03]',
-                    weekStyle.bg,
+                    'flex w-full items-center gap-2 border-b border-white/10 px-3 py-2.5 text-left transition-colors hover:bg-white/[0.08]',
+                    week === activeCycleWeek ? 'bg-white/[0.08]' : 'bg-white/[0.06]',
                   )}
                   aria-expanded={!isCollapsed}
                 >
                   <ChevronDown
                     className={cn(
-                      'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
+                      'h-4 w-4 shrink-0 text-white/50 transition-transform',
                       isCollapsed && '-rotate-90',
                     )}
                   />
@@ -382,22 +382,28 @@ export default function ExerciseItem({
                       Kevennys
                     </span>
                   )}
-                  <span className="ml-auto text-[10px] font-medium tabular-nums text-muted-foreground">
+                  {completedCount > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-400">
+                      <CheckCircle2 size={10} />
+                      Tehty{completedCount > 1 ? ` ${completedCount}` : ''}
+                    </span>
+                  )}
+                  <span className="ml-auto text-[10px] font-medium tabular-nums text-white/50">
                     {blocks.length} {blocks.length === 1 ? 'sarja' : 'sarjaa'}
                   </span>
                 </button>
                 {!isCollapsed && (
-                  <div className="space-y-2 p-3">
+                  <div className="space-y-2 bg-white/[0.02] p-3">
                     {blocks.length > 0 ? (
                       renderSetRows(blocks)
                     ) : (
-                      <p className="py-2 text-center text-xs text-muted-foreground">Ei sarjoja</p>
+                      <p className="py-2 text-center text-xs text-white/40">Ei sarjoja</p>
                     )}
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => addSetBlock(exercise.id, week)}
-                      className="h-9 w-full rounded-lg border border-dashed border-white/10 text-muted-foreground hover:border-primary/50 hover:text-primary"
+                      className="h-9 w-full rounded-lg border border-dashed border-white/15 text-white/50 hover:border-primary/50 hover:text-primary"
                     >
                       <Plus className="mr-1.5 h-3.5 w-3.5" />
                       Lisää sarja

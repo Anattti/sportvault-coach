@@ -1,6 +1,5 @@
 export interface CycleWeekStyle {
   border: string;
-  bg: string;
   text: string;
   accent: string;
   ring: string;
@@ -8,55 +7,48 @@ export interface CycleWeekStyle {
 
 const WEEK_PALETTE: CycleWeekStyle[] = [
   {
-    border: 'border-cyan-400/30',
-    bg: 'bg-cyan-400/[0.06]',
-    text: 'text-cyan-400',
-    accent: 'bg-cyan-400',
-    ring: 'ring-cyan-400/20',
-  },
-  {
-    border: 'border-violet-400/30',
-    bg: 'bg-violet-400/[0.06]',
-    text: 'text-violet-400',
-    accent: 'bg-violet-400',
-    ring: 'ring-violet-400/20',
-  },
-  {
-    border: 'border-emerald-400/30',
-    bg: 'bg-emerald-400/[0.06]',
-    text: 'text-emerald-400',
-    accent: 'bg-emerald-400',
-    ring: 'ring-emerald-400/20',
-  },
-  {
-    border: 'border-rose-400/30',
-    bg: 'bg-rose-400/[0.06]',
-    text: 'text-rose-400',
-    accent: 'bg-rose-400',
-    ring: 'ring-rose-400/20',
-  },
-  {
-    border: 'border-amber-400/30',
-    bg: 'bg-amber-400/[0.06]',
-    text: 'text-amber-400',
-    accent: 'bg-amber-400',
-    ring: 'ring-amber-400/20',
-  },
-  {
-    border: 'border-sky-400/30',
-    bg: 'bg-sky-400/[0.06]',
+    border: 'border-sky-400/35',
     text: 'text-sky-400',
     accent: 'bg-sky-400',
-    ring: 'ring-sky-400/20',
+    ring: 'ring-sky-400/30',
+  },
+  {
+    border: 'border-purple-400/35',
+    text: 'text-purple-400',
+    accent: 'bg-purple-400',
+    ring: 'ring-purple-400/30',
+  },
+  {
+    border: 'border-emerald-400/35',
+    text: 'text-emerald-400',
+    accent: 'bg-emerald-400',
+    ring: 'ring-emerald-400/30',
+  },
+  {
+    border: 'border-pink-400/35',
+    text: 'text-pink-400',
+    accent: 'bg-pink-400',
+    ring: 'ring-pink-400/30',
+  },
+  {
+    border: 'border-orange-400/35',
+    text: 'text-orange-400',
+    accent: 'bg-orange-400',
+    ring: 'ring-orange-400/30',
+  },
+  {
+    border: 'border-teal-400/35',
+    text: 'text-teal-400',
+    accent: 'bg-teal-400',
+    ring: 'ring-teal-400/30',
   },
 ];
 
 const DELOAD_STYLE: CycleWeekStyle = {
   border: 'border-orange-500/40',
-  bg: 'bg-orange-500/[0.08]',
   text: 'text-orange-400',
   accent: 'bg-orange-500',
-  ring: 'ring-orange-500/25',
+  ring: 'ring-orange-500/30',
 };
 
 export function getCycleWeekStyle(week: number, isDeload: boolean): CycleWeekStyle {

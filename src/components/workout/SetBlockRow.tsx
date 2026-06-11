@@ -17,11 +17,17 @@ interface Props {
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/45">
       {children}
     </span>
   );
 }
+
+const inputClassName =
+  'h-10 rounded-lg border border-white/10 bg-white/[0.06] text-center font-bold transition-colors hover:border-white/20 focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary';
+
+const mobileInputClassName =
+  'h-11 border border-white/10 bg-white/[0.06] text-center font-bold transition-colors hover:border-white/20 focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary';
 
 export default function SetBlockRow({ block, index, updateBlock, removeBlock }: Props) {
   const hasNotes = Boolean(block.notes?.trim());
@@ -52,7 +58,7 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
       value={block.notes || ''}
       onChange={(e) => updateBlock(block.id, 'notes', e.target.value)}
       placeholder={`Sarjan ${index + 1} erikoisohjeet...`}
-      className="min-h-[60px] resize-none rounded-xl border-white/10 bg-black/40 text-xs focus-visible:ring-primary"
+      className="min-h-[60px] resize-none rounded-xl border border-white/10 bg-white/[0.06] text-xs focus-visible:ring-primary"
     />
   );
 
@@ -89,9 +95,9 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
   return (
     <div className="w-full">
       {/* Mobile: card layout */}
-      <div className="rounded-xl border border-white/8 bg-black/20 p-3 md:hidden">
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 md:hidden">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-bold text-muted-foreground">Sarja {index + 1}</span>
+          <span className="text-sm font-bold text-white/60">Sarja {index + 1}</span>
           {actionButtons}
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -104,10 +110,7 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
               placeholder="-"
               disabled={block.isBodyweight}
               tabIndex={tabBase + 1}
-              className={cn(
-                'h-11 border-white/5 bg-black/40 text-center font-bold',
-                block.isBodyweight && 'opacity-50',
-              )}
+              className={cn(mobileInputClassName, block.isBodyweight && 'opacity-50')}
             />
           </div>
           <div>
@@ -118,7 +121,7 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
               inputMode="numeric"
               placeholder="-"
               tabIndex={tabBase + 2}
-              className="h-11 border-white/5 bg-black/40 text-center font-bold"
+              className={mobileInputClassName}
             />
           </div>
           <div>
@@ -129,7 +132,7 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
               inputMode="numeric"
               placeholder="60"
               tabIndex={tabBase + 3}
-              className="h-11 border-white/5 bg-black/40 text-center font-bold"
+              className={mobileInputClassName}
             />
           </div>
           <div>
@@ -140,7 +143,7 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
               inputMode="decimal"
               placeholder="-"
               tabIndex={tabBase + 4}
-              className="h-11 border-white/5 bg-black/40 text-center font-bold"
+              className={mobileInputClassName}
             />
           </div>
         </div>
@@ -150,7 +153,7 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
       {/* Desktop: table row */}
       <div className="hidden flex-col gap-1 md:flex">
         <div className="group flex w-full items-center gap-2">
-          <div className="w-8 text-center text-sm font-bold text-muted-foreground">{index + 1}</div>
+          <div className="w-8 text-center text-sm font-bold text-white/60">{index + 1}</div>
 
           <div className="grid flex-1 grid-cols-4 gap-2">
             <div className="relative min-w-[80px]">
@@ -161,12 +164,9 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
                 placeholder="-"
                 disabled={block.isBodyweight}
                 tabIndex={tabBase + 1}
-                className={cn(
-                  'h-10 rounded-lg border-white/5 bg-black/40 text-center font-bold focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary',
-                  block.isBodyweight && 'opacity-50',
-                )}
+                className={cn(inputClassName, block.isBodyweight && 'opacity-50')}
               />
-              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground">
+              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-white/40">
                 {block.isBodyweight ? 'BW' : 'kg'}
               </span>
             </div>
@@ -178,9 +178,9 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
                 inputMode="numeric"
                 placeholder="-"
                 tabIndex={tabBase + 2}
-                className="h-10 rounded-lg border-white/5 bg-black/40 text-center font-bold focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+                className={inputClassName}
               />
-              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground">
+              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-white/40">
                 {targetUnit}
               </span>
             </div>
@@ -192,9 +192,9 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
                 inputMode="numeric"
                 placeholder="60"
                 tabIndex={tabBase + 3}
-                className="h-10 rounded-lg border-white/5 bg-black/40 text-center font-bold focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+                className={inputClassName}
               />
-              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground">
+              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-white/40">
                 s
               </span>
             </div>
@@ -206,9 +206,9 @@ export default function SetBlockRow({ block, index, updateBlock, removeBlock }: 
                 inputMode="decimal"
                 placeholder="-"
                 tabIndex={tabBase + 4}
-                className="h-10 rounded-lg border-white/5 bg-black/40 text-center font-bold focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+                className={inputClassName}
               />
-              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground">
+              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-white/40">
                 RPE
               </span>
             </div>
