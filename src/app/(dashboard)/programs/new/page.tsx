@@ -1,11 +1,20 @@
-'use client';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getServerUser } from '@/lib/supabase/auth';
+import WorkoutPlanner from '@/components/workout/WorkoutPlanner';
+import { fetchCoachClientOptions } from '@/lib/coach/clients';
 
-import WorkoutBuilder from '@/components/workout/WorkoutBuilder';
+export default async function NewProgramPage() {
+  const user = await getServerUser();
+  if (!user) return null;
 
-export default function NewProgramPage() {
+  const supabase = await createServerSupabaseClient();
+  const clients = await fetchCoachClientOptions(supabase, user.id);
+
   return (
-    <WorkoutBuilder
+    <WorkoutPlanner
       mode="template"
+      coachId={user.id}
+      clients={clients}
       returnPath="/programs"
       title="Luo uusi treeni"
     />

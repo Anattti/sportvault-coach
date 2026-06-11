@@ -9,7 +9,7 @@ import DashboardEmptyState from '@/components/dashboard/DashboardEmptyState';
 import NewWorkoutsBanner from '@/components/dashboard/NewWorkoutsBanner';
 import InviteClientDialog from '@/components/clients/InviteClientDialog';
 import { Button } from '@/components/ui/button';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getServerUser } from '@/lib/supabase/auth';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -19,8 +19,7 @@ function getGreeting(): string {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getServerUser();
 
   if (!user) return null;
 

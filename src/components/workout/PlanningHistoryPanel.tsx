@@ -22,6 +22,14 @@ import { buildExercisePayloadFromSession, buildWorkoutPayloadFromHistorySession 
 import { formatDateFi } from '@/lib/dates/fi';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { CoachClientOption } from '@/lib/coach/clients';
 import { Plus } from 'lucide-react';
 
 export type PlanningHistoryTab = 'workouts' | 'exercises';
@@ -42,6 +50,10 @@ interface PlanningHistoryPanelProps {
   onNavStateChange?: (state: PlanningHistoryNavState) => void;
   onApplyFromHistory?: (payload: ApplyExerciseFromHistoryPayload) => void;
   onApplyWorkoutFromHistory?: (payload: ApplyWorkoutFromHistoryPayload) => void;
+  clients?: CoachClientOption[];
+  selectedClientId?: string;
+  onClientChange?: (clientId: string) => void;
+  summariesLoading?: boolean;
   className?: string;
 }
 
@@ -63,6 +75,10 @@ export default function PlanningHistoryPanel({
   onNavStateChange,
   onApplyFromHistory,
   onApplyWorkoutFromHistory,
+  clients,
+  selectedClientId,
+  onClientChange,
+  summariesLoading = false,
   className,
 }: PlanningHistoryPanelProps) {
   const supabase = useMemo(() => createClient(), []);
@@ -285,23 +301,61 @@ export default function PlanningHistoryPanel({
     selectedProgram?.workoutName ??
     (history?.meta.workoutId === resolvedWorkoutId ? history.meta.programName : null);
 
-  if (sessionSummaries.length === 0) {
-    return (
-      <div
-        className={cn(
-          'glass-panel rounded-2xl p-6 text-center text-sm text-muted-foreground',
-          className,
-        )}
+  const showClientPicker = clients !== undefined && clients.length > 0;
+  const selectedClient = clients?.find((client) => client.id === selectedClientId);
+
+  const clientPicker = showClientPicker && (
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-muted-foreground">Treenaaja</label>
+      <Select
+        value={selectedClientId ?? ''}
+        onValueChange={(value) => value && onClientChange?.(value)}
       >
-        <Activity className="mx-auto mb-2 h-6 w-6 opacity-40" />
-        <p>Ei vielä suoritettuja treenejä.</p>
+        <SelectTrigger className="h-9 w-full rounded-xl border-white/10 bg-black/20">
+          <SelectValue placeholder="Valitse treenaaja...">
+            {selectedClient?.name ?? 'Valitse treenaaja...'}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent className="glass-panel border-white/10">
+          {clients.map((client) => (
+            <SelectItem key={client.id} value={client.id} className="cursor-pointer">
+              {client.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  const emptyContent = (
+    <div className="glass-panel rounded-2xl p-6 text-center text-sm text-muted-foreground">
+      <Activity className="mx-auto mb-2 h-6 w-6 opacity-40" />
+      <p>Ei vielä suoritettuja treenejä.</p>
+    </div>
+  );
+
+  const loadingContent = (
+    <div className="flex items-center justify-center py-10">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+    </div>
+  );
+
+  if (!showClientPicker && sessionSummaries.length === 0) {
+    return (
+      <div className={cn('space-y-4', className)}>
+        {emptyContent}
       </div>
     );
   }
 
-  return (
-    <div className={cn('space-y-4', className)}>
-      <div className="flex gap-1 rounded-lg bg-white/5 p-1 ring-1 ring-white/8">
+  const historyContent =
+    summariesLoading ? (
+      loadingContent
+    ) : sessionSummaries.length === 0 ? (
+      emptyContent
+    ) : (
+      <>
+        <div className="flex gap-1 rounded-lg bg-white/5 p-1 ring-1 ring-white/8">
         <button
           type="button"
           onClick={() => updateNavState({ activeTab: 'workouts' })}
@@ -478,6 +532,13 @@ export default function PlanningHistoryPanel({
           )}
         </div>
       )}
+      </>
+    );
+
+  return (
+    <div className={cn('space-y-4', className)}>
+      {clientPicker}
+      {historyContent}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { subMonths } from 'date-fns';
 import { calculateE1RM } from '@/lib/analytics';
 import { mapToAnalyticsSessions } from '@/lib/client-analytics/progress';
 import {
@@ -22,11 +23,16 @@ export interface SessionDetailResult {
   previousBestByExercise: Record<string, number>;
 }
 
+export const SESSION_SUMMARY_LOOKBACK_MONTHS = 6;
+export const SESSION_SUMMARY_LIMIT = 100;
+
 export async function fetchClientSessionSummaries(
   supabase: SupabaseClient,
   clientId: string,
   coachId: string | null,
 ): Promise<SessionSummary[]> {
+  const lookbackStart = subMonths(new Date(), SESSION_SUMMARY_LOOKBACK_MONTHS);
+
   const { data: sessions } = await supabase
     .from('workout_sessions')
     .select(`
@@ -48,7 +54,9 @@ export async function fetchClientSessionSummaries(
       )
     `)
     .eq('user_id', clientId)
-    .order('date', { ascending: false });
+    .gte('date', lookbackStart.toISOString())
+    .order('date', { ascending: false })
+    .limit(SESSION_SUMMARY_LIMIT);
 
   const sessionRows = sessions ?? [];
   const sessionIds = sessionRows.map((s) => s.id);

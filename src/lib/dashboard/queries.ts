@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getServerUser } from '@/lib/supabase/auth';
 import type { PendingInvitation } from '@/components/clients/PendingInvitations';
 import {
   buildProgramContextMap,
@@ -244,12 +245,11 @@ const ATTENTION_PRIORITY: Record<AttentionClient['reason'], number> = {
 };
 
 export async function getDashboardData(): Promise<DashboardData | null> {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getServerUser();
 
   if (!user) return null;
+
+  const supabase = await createServerSupabaseClient();
 
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });

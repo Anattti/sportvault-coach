@@ -1,14 +1,16 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getServerUser } from '@/lib/supabase/auth';
 import ClientList from '@/components/clients/ClientList';
 import InviteClientDialog from '@/components/clients/InviteClientDialog';
 import PendingInvitations from '@/components/clients/PendingInvitations';
 import { CoachClient } from '@/types';
 
 export default async function ClientsPage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getServerUser();
 
   if (!user) return null;
+
+  const supabase = await createServerSupabaseClient();
 
   const { data: clients } = await supabase
     .from('coach_clients')
@@ -24,24 +26,32 @@ export default async function ClientsPage() {
     experience_level: string | null;
   }>();
 
-  if (clientIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from('user_profiles')
-      .select('id, nickname, age, weight, height, experience_level')
-      .in('id', clientIds);
+  const [{ data: profiles }, { data: pendingInvitations }] = await Promise.all([
+    clientIds.length > 0
+      ? supabase
+          .from('user_profiles')
+          .select('id, nickname, age, weight, height, experience_level')
+          .in('id', clientIds)
+      : Promise.resolve({ data: [] as Array<{
+          id: string;
+          nickname: string | null;
+          age: number | null;
+          weight: number | null;
+          height: number | null;
+          experience_level: string | null;
+        }> }),
+    supabase
+      .from('coach_invitations')
+      .select('id, invite_code, client_email, expires_at, created_at')
+      .eq('coach_id', user.id)
+      .is('used_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false }),
+  ]);
 
-    for (const p of profiles || []) {
-      profilesById.set(p.id, p);
-    }
+  for (const p of profiles || []) {
+    profilesById.set(p.id, p);
   }
-
-  const { data: pendingInvitations } = await supabase
-    .from('coach_invitations')
-    .select('id, invite_code, client_email, expires_at, created_at')
-    .eq('coach_id', user.id)
-    .is('used_at', null)
-    .gt('expires_at', new Date().toISOString())
-    .order('created_at', { ascending: false });
 
   const formattedClients: CoachClient[] = (clients || []).map((c) => {
     const profile = profilesById.get(c.client_id);

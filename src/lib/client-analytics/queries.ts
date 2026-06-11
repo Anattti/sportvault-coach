@@ -32,6 +32,8 @@ import { ClientSessionRow, PrescriptionExerciseRow } from './types';
 
 export interface GetClientAnalyticsOptions {
   periodWeeks?: number;
+  /** Max sessions fetched for analytics (default 100). */
+  sessionLimit?: number;
 }
 
 export async function getClientAnalytics(
@@ -40,9 +42,10 @@ export async function getClientAnalytics(
   options: GetClientAnalyticsOptions = {},
 ): Promise<ClientAnalyticsData | null> {
   const periodWeeks = options.periodWeeks ?? 8;
+  const sessionLimit = options.sessionLimit ?? 100;
   const supabase = await createServerSupabaseClient();
   const now = new Date();
-  const lookbackStart = subWeeks(now, 52);
+  const lookbackStart = subWeeks(now, periodWeeks);
 
   const { weekStart: currentWeekStart, weekEnd: currentWeekEnd } = getCurrentWeekBounds(now);
 
@@ -61,26 +64,33 @@ export async function getClientAnalytics(
         date,
         duration,
         total_volume,
+        feeling,
         rpe_average,
+        heart_rate_avg,
+        heart_rate_max,
+        notes,
         cycle_week,
         is_deload,
-        workouts ( workout_type ),
+        workouts ( program, workout_type, cycle_weeks, programmed_deloads ),
         session_exercises (
           id,
           name,
           exercise_id,
           is_ad_hoc,
           is_swapped,
+          notes,
           session_sets (
             weight_used,
             reps_completed,
-            rpe
+            rpe,
+            notes
           )
         )
       `)
       .eq('user_id', clientId)
       .gte('date', lookbackStart.toISOString())
-      .order('date', { ascending: true }),
+      .order('date', { ascending: false })
+      .limit(sessionLimit),
     supabase
       .from('coach_program_assignments')
       .select(`
@@ -103,7 +113,16 @@ export async function getClientAnalytics(
       .gte('scheduled_date', subWeeks(now, periodWeeks).toISOString().slice(0, 10)),
   ]);
 
-  const sessionRows = (sessionData ?? []) as ClientSessionRow[];
+  const sessionRows = [...((sessionData ?? []) as ClientSessionRow[])].sort((a, b) => {
+    const aTime = a.date ? Date.parse(a.date) : 0;
+    const bTime = b.date ? Date.parse(b.date) : 0;
+    return aTime - bTime;
+  });
+  const overviewSessions = [...sessionRows].sort((a, b) => {
+    const aTime = a.date ? Date.parse(a.date) : 0;
+    const bTime = b.date ? Date.parse(b.date) : 0;
+    return bTime - aTime;
+  });
   const analyticsSessions = mapToAnalyticsSessions(sessionRows);
 
   const scheduledThisWeekByClient = new Map<string, number>();
@@ -227,5 +246,6 @@ export async function getClientAnalytics(
     trainingStreakWeeks,
     programStuck,
     adherence,
+    overviewSessions,
   };
 }

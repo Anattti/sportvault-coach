@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getServerUser } from '@/lib/supabase/auth';
 import ClientProfileHeader from '@/components/clients/ClientProfileHeader';
 import { CoachClient } from '@/types';
 
@@ -12,10 +13,11 @@ export default async function ClientLayout({
 }) {
   const resolvedParams = await params;
   const clientId = resolvedParams.id;
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getServerUser();
 
   if (!user) return null;
+
+  const supabase = await createServerSupabaseClient();
 
   const [{ data: clientData, error }, { data: userProfile }] = await Promise.all([
     supabase

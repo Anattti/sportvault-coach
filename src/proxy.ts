@@ -80,19 +80,15 @@ export async function proxy(request: NextRequest) {
     return safeRedirect(coachProfile ? '/' : '/onboarding');
   }
 
-  // Tarkista valmentajaprofiili (dashboard-reitit)
-  if (user && !isAuthRoute && !isAuthCallback && !isResetPasswordRoute) {
+  // Onboarding-reitti: ohjaa dashboardiin jos profiili on jo olemassa
+  if (user && isOnboardingRoute) {
     const { data: coachProfile } = await supabase
       .from('coach_profiles')
       .select('id')
       .eq('id', user.id)
       .maybeSingle();
 
-    if (!coachProfile && !isOnboardingRoute) {
-      return safeRedirect('/onboarding');
-    }
-
-    if (coachProfile && isOnboardingRoute) {
+    if (coachProfile) {
       return safeRedirect('/');
     }
   }

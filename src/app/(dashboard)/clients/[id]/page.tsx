@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getServerUser } from '@/lib/supabase/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import RecentActivityFeed from '@/components/dashboard/RecentActivityFeed';
 import DevelopmentHero from '@/components/client-analytics/DevelopmentHero';
@@ -26,47 +27,20 @@ import { cn } from '@/lib/utils';
 export default async function ClientOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const clientId = resolvedParams.id;
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getServerUser();
 
   if (!user) return null;
 
-  const eightWeeksAgo = subWeeks(new Date(), 8);
+  const supabase = await createServerSupabaseClient();
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
 
   const [
-    { data: sessions },
     { data: assignment },
     { data: relationship },
     { data: managedWorkout },
     analytics,
   ] = await Promise.all([
-    supabase
-      .from('workout_sessions')
-      .select(`
-        id,
-        date,
-        duration,
-        total_volume,
-        feeling,
-        rpe_average,
-        heart_rate_avg,
-        heart_rate_max,
-        notes,
-        cycle_week,
-        workout_id,
-        workouts ( program, workout_type, cycle_weeks, programmed_deloads ),
-        session_exercises (
-          id,
-          notes,
-          session_sets ( notes )
-        )
-      `)
-      .eq('user_id', clientId)
-      .gte('date', eightWeeksAgo.toISOString())
-      .order('date', { ascending: false })
-      .limit(50),
     supabase
       .from('coach_program_assignments')
       .select(`
@@ -74,7 +48,7 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
         workouts ( program, cycle_weeks, workout_type, programmed_deloads )
       `)
       .eq('client_id', clientId)
-      .eq('coach_id', user?.id ?? '')
+      .eq('coach_id', user.id)
       .order('assigned_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -82,7 +56,7 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
       .from('coach_clients')
       .select('status')
       .eq('client_id', clientId)
-      .eq('coach_id', user?.id ?? '')
+      .eq('coach_id', user.id)
       .maybeSingle(),
     supabase
       .from('workouts')
@@ -92,10 +66,10 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
-    getClientAnalytics(clientId, user.id, { periodWeeks: 8 }),
+    getClientAnalytics(clientId, user.id, { periodWeeks: 8, sessionLimit: 50 }),
   ]);
 
-  const sessionRows = sessions ?? [];
+  const sessionRows = analytics?.overviewSessions ?? [];
   const latestSession = sessionRows[0];
   const assignedWorkout = assignment?.workouts as {
     program: string | null;
@@ -138,7 +112,7 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
     status: clientStatus,
     sessions: sessionRows,
     hasAssignedProgram,
-    programStuck: cycleStatus.programStuck,
+    programStuck: analytics?.programStuck ?? cycleStatus.programStuck,
     cycleWeek: cycleStatus.currentWeek,
     lastSessionDate,
   });
@@ -175,12 +149,10 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
   const volumeTrend = getVolumeTrendLabel(thisWeekVolume, prev4WeekAvg);
 
   const recentSessionIds = sessionRows.slice(0, 5).map((s) => s.id);
-  const [notedSessionIds, athleteNoteSessionIds] = user
-    ? await Promise.all([
-        fetchNotedSessionIds(supabase, user.id, recentSessionIds),
-        fetchAthleteNoteSessionIds(supabase, recentSessionIds),
-      ])
-    : [new Set<string>(), new Set<string>()];
+  const [notedSessionIds, athleteNoteSessionIds] = await Promise.all([
+    fetchNotedSessionIds(supabase, user.id, recentSessionIds),
+    fetchAthleteNoteSessionIds(supabase, recentSessionIds),
+  ]);
 
   const formattedSessions = formatSessionSummaries(
     sessionRows.slice(0, 5),

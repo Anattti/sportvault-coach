@@ -32,13 +32,16 @@ interface ResizableHistoryAsideProps {
 }
 
 export default function ResizableHistoryAside({ onUnpin, children }: ResizableHistoryAsideProps) {
+  const [mounted, setMounted] = useState(false);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
+  const [isResizing, setIsResizing] = useState(false);
+  const widthRef = useRef(width);
 
   useEffect(() => {
     setWidth(readStoredWidth());
+    widthRef.current = readStoredWidth();
+    setMounted(true);
   }, []);
-  const [isResizing, setIsResizing] = useState(false);
-  const widthRef = useRef(width);
 
   const persistWidth = useCallback((nextWidth: number) => {
     try {
@@ -79,8 +82,11 @@ export default function ResizableHistoryAside({ onUnpin, children }: ResizableHi
   return (
     <div className="hidden shrink-0 lg:flex lg:sticky lg:top-4 lg:max-h-[calc(100vh-8rem)]">
       <aside
-        style={{ width }}
-        className="flex min-h-0 flex-col overflow-y-auto overflow-x-hidden pr-1"
+        style={mounted ? { width } : undefined}
+        className={cn(
+          'flex min-h-0 flex-col overflow-y-auto overflow-x-hidden pr-1',
+          !mounted && 'w-[360px]',
+        )}
       >
         <div className="mb-3 flex items-center justify-between px-1">
           <span className="flex items-center gap-2 text-sm font-semibold">

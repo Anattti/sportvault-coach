@@ -13,10 +13,10 @@ type RawSessionRow = {
   date: string | null;
   duration: number | null;
   total_volume: number | null;
-  feeling: number | null;
+  feeling?: number | null;
   rpe_average: number | null;
-  heart_rate_avg: number | null;
-  heart_rate_max: number | null;
+  heart_rate_avg?: number | null;
+  heart_rate_max?: number | null;
   notes?: string | null;
   workout_id?: string | null;
   cycle_week?: number | null;
@@ -74,10 +74,10 @@ export function formatSessionSummary(
     duration: session.duration ?? 0,
     totalVolume: session.total_volume ?? 0,
     workoutId: session.workout_id ?? null,
-    feeling: session.feeling,
+    feeling: session.feeling ?? null,
     rpeAverage: session.rpe_average,
-    heartRateAvg: session.heart_rate_avg,
-    heartRateMax: session.heart_rate_max,
+    heartRateAvg: session.heart_rate_avg ?? null,
+    heartRateMax: session.heart_rate_max ?? null,
     workoutName: session.workouts?.program ?? null,
     workoutType: session.workouts?.workout_type ?? null,
     exerciseCount: countExercises(session.session_exercises),

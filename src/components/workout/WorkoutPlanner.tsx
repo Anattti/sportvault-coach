@@ -11,7 +11,10 @@ import PlanningHistoryPanel, {
   PlanningHistoryNavState,
 } from '@/components/workout/PlanningHistoryPanel';
 import ResizableHistoryAside from '@/components/workout/ResizableHistoryAside';
+import { CoachClientOption } from '@/lib/coach/clients';
+import { fetchClientSessionSummaries } from '@/lib/sessions/queries';
 import { groupSessionsByWorkout } from '@/lib/sessions/workout-programs';
+import { createClient } from '@/lib/supabase/client';
 import {
   ApplyExerciseFromHistoryPayload,
   ApplyWorkoutFromHistoryPayload,
@@ -56,18 +59,21 @@ function readIsLargeScreen(): boolean {
 }
 
 export interface WorkoutPlannerProps extends WorkoutBuilderProps {
-  sessionSummaries: SessionSummary[];
+  sessionSummaries?: SessionSummary[];
   workoutHistory?: WorkoutHistoryData | null;
-  clientId: string;
+  clientId?: string;
+  clients?: CoachClientOption[];
 }
 
 export default function WorkoutPlanner({
-  sessionSummaries,
+  sessionSummaries: sessionSummariesProp,
   workoutHistory,
   clientId,
+  clients,
   title,
   returnPath,
   workoutId,
+  coachId,
   ...builderProps
 }: WorkoutPlannerProps) {
   const router = useRouter();
@@ -76,21 +82,72 @@ export default function WorkoutPlanner({
   const savedHistoryScrollTopRef = useRef(0);
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [historyPinned, setHistoryPinned] = useState(true);
+  const [mounted, setMounted] = useState(false);
+  const [historyPinned, setHistoryPinned] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(false);
-  const [layoutReady, setLayoutReady] = useState(false);
   const [suggestedExerciseNames, setSuggestedExerciseNames] = useState<string[]>([]);
 
+  const isPickerMode = clients !== undefined;
+
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(
+    () => clients?.[0]?.id ?? null,
+  );
+  const [pickerSummaries, setPickerSummaries] = useState<SessionSummary[]>([]);
+  const [summariesLoading, setSummariesLoading] = useState(false);
+
+  const effectiveClientId = isPickerMode ? selectedClientId : clientId;
+  const effectiveSummaries = isPickerMode ? pickerSummaries : (sessionSummariesProp ?? []);
+  const historyWorkoutId = isPickerMode ? undefined : workoutId;
+
   const programs = useMemo(
-    () => groupSessionsByWorkout(sessionSummaries),
-    [sessionSummaries],
+    () => groupSessionsByWorkout(effectiveSummaries),
+    [effectiveSummaries],
   );
 
   const [historyNavState, setHistoryNavState] = useState<PlanningHistoryNavState>(() => ({
     activeTab: 'workouts',
-    selectedWorkoutId: workoutId ?? programs[0]?.workoutId ?? null,
+    selectedWorkoutId: historyWorkoutId ?? programs[0]?.workoutId ?? null,
     selectedExerciseName: null,
   }));
+
+  useEffect(() => {
+    if (!isPickerMode || !selectedClientId) {
+      setPickerSummaries([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = async () => {
+      setSummariesLoading(true);
+      try {
+        const supabase = createClient();
+        const summaries = await fetchClientSessionSummaries(
+          supabase,
+          selectedClientId,
+          coachId ?? null,
+        );
+        if (!cancelled) setPickerSummaries(summaries);
+      } finally {
+        if (!cancelled) setSummariesLoading(false);
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isPickerMode, selectedClientId, coachId]);
+
+  const handleClientChange = useCallback((newClientId: string) => {
+    setSelectedClientId(newClientId);
+    setHistoryNavState({
+      activeTab: 'workouts',
+      selectedWorkoutId: null,
+      selectedExerciseName: null,
+    });
+  }, []);
 
   const setPinnedHistory = useCallback((next: boolean | ((prev: boolean) => boolean)) => {
     setHistoryPinned((prev) => {
@@ -103,7 +160,7 @@ export default function WorkoutPlanner({
   useEffect(() => {
     setHistoryPinned(readHistoryPinnedPreference());
     setIsLargeScreen(readIsLargeScreen());
-    setLayoutReady(true);
+    setMounted(true);
 
     const media = window.matchMedia('(min-width: 1024px)');
     const sync = () => setIsLargeScreen(media.matches);
@@ -111,6 +168,8 @@ export default function WorkoutPlanner({
     media.addEventListener('change', sync);
     return () => media.removeEventListener('change', sync);
   }, []);
+
+  const showPinnedHistory = mounted && historyPinned && isLargeScreen;
 
   const handleExercisesChange = useCallback((exerciseList: ExerciseData[]) => {
     const names = exerciseList.map((ex) => ex.name.trim()).filter(Boolean);
@@ -146,21 +205,30 @@ export default function WorkoutPlanner({
     }
   }, []);
 
-  const showPinnedHistory = layoutReady && historyPinned && isLargeScreen;
-
-  const historyPanel = (
+  const historyPanel = effectiveClientId ? (
     <PlanningHistoryPanel
-      sessionSummaries={sessionSummaries}
+      sessionSummaries={effectiveSummaries}
       workoutHistory={workoutHistory}
-      clientId={clientId}
-      workoutId={workoutId}
+      clientId={effectiveClientId}
+      workoutId={historyWorkoutId}
       suggestedExerciseNames={suggestedExerciseNames}
       navState={historyNavState}
       onNavStateChange={setHistoryNavState}
       onApplyFromHistory={handleApplyFromHistory}
       onApplyWorkoutFromHistory={handleApplyWorkoutFromHistory}
+      clients={clients}
+      selectedClientId={selectedClientId ?? undefined}
+      onClientChange={isPickerMode ? handleClientChange : undefined}
+      summariesLoading={isPickerMode ? summariesLoading : false}
     />
+  ) : (
+    <div className="glass-panel rounded-2xl p-6 text-center text-sm text-muted-foreground">
+      <History className="mx-auto mb-2 h-6 w-6 opacity-40" />
+      <p>Ei valmennettavia asiakkaita.</p>
+    </div>
   );
+
+  const sessionCount = effectiveSummaries.length;
 
   const mobileActionBar = (
     <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-background/95 p-3 backdrop-blur-md lg:hidden">
@@ -182,9 +250,9 @@ export default function WorkoutPlanner({
         >
           <History className="mr-1.5 h-4 w-4 text-primary" />
           Historia
-          {sessionSummaries.length > 0 && (
+          {sessionCount > 0 && (
             <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 px-1.5 text-[10px]">
-              {sessionSummaries.length}
+              {sessionCount}
             </Badge>
           )}
         </Button>
@@ -225,12 +293,12 @@ export default function WorkoutPlanner({
             >
               <History className="h-4 w-4 text-primary sm:mr-1.5" />
               <span className="hidden sm:inline">Historia</span>
-              {sessionSummaries.length > 0 && (
+              {sessionCount > 0 && (
                 <Badge
                   variant="secondary"
                   className="ml-0 h-5 min-w-5 px-1.5 text-[10px] sm:ml-1.5"
                 >
-                  {sessionSummaries.length}
+                  {sessionCount}
                 </Badge>
               )}
             </SheetTrigger>
@@ -291,6 +359,7 @@ export default function WorkoutPlanner({
             title={title}
             returnPath={returnPath}
             workoutId={workoutId}
+            coachId={coachId}
             onLoadingChange={setSaving}
             onExercisesChange={handleExercisesChange}
             {...builderProps}

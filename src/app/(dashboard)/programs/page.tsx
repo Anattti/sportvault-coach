@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getServerUser } from '@/lib/supabase/auth';
 import Link from 'next/link';
 import { Plus, Dumbbell, Calendar, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,35 +9,37 @@ import WorkoutUpdateMeta from '@/components/programs/WorkoutUpdateMeta';
 import { fetchAverageWorkoutDurations, formatWorkoutDurationMinutes } from '@/lib/workouts/duration';
 
 export default async function ProgramsPage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getServerUser();
 
   if (!user) return null;
 
-  // Hae valmentajan tekemät ohjelmat
-  const { data: programs } = await supabase
-    .from('workouts')
-    .select(`
-      id,
-      program,
-      workout_type,
-      duration,
-      cycle_weeks,
-      created_at,
-      updated_at,
-      updated_by,
-      user_id,
-      exercises ( count )
-    `)
-    .eq('user_id', user.id)
-    .eq('managed_by_coach', false)
-    .order('created_at', { ascending: false });
+  const supabase = await createServerSupabaseClient();
 
-  const { data: coachProfile } = await supabase
-    .from('user_profiles')
-    .select('nickname')
-    .eq('id', user.id)
-    .maybeSingle();
+  const [{ data: programs }, { data: coachProfile }] = await Promise.all([
+    supabase
+      .from('workouts')
+      .select(`
+        id,
+        program,
+        workout_type,
+        duration,
+        cycle_weeks,
+        created_at,
+        updated_at,
+        updated_by,
+        user_id,
+        exercises ( count )
+      `)
+      .eq('user_id', user.id)
+      .eq('managed_by_coach', false)
+      .order('created_at', { ascending: false })
+      .limit(100),
+    supabase
+      .from('user_profiles')
+      .select('nickname')
+      .eq('id', user.id)
+      .maybeSingle(),
+  ]);
 
   const programRows = programs ?? [];
   const averageDurations = await fetchAverageWorkoutDurations(supabase, programRows);

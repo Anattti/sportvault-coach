@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { subDays } from 'date-fns';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getServerUser } from '@/lib/supabase/auth';
 import { WorkoutNotification } from '@/types';
 import { fetchAthleteNoteSessionIds, fetchNotedSessionIds } from '@/lib/sessions/format';
 
@@ -19,11 +20,11 @@ export async function getLastSeenAt(): Promise<Date> {
 }
 
 export async function getWorkoutNotifications(): Promise<WorkoutNotification[]> {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getServerUser();
 
   if (!user) return [];
 
+  const supabase = await createServerSupabaseClient();
   const lastSeenAt = await getLastSeenAt();
 
   const { data: clients } = await supabase

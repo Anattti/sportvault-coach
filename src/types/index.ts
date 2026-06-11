@@ -1,3 +1,7 @@
+import type { ClientSessionRow } from '@/lib/client-analytics/types';
+
+export type { ClientSessionRow };
+
 export interface CoachClient {
   id: string;
   coach_id: string;
@@ -137,6 +141,7 @@ export interface ClientAnalyticsData {
   trainingStreakWeeks: number;
   programStuck: boolean;
   adherence: AdherenceSummary;
+  overviewSessions: ClientSessionRow[];
 }
 
 export interface AttentionClient {

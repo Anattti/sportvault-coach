@@ -83,12 +83,15 @@ export async function fetchAverageWorkoutDurations(
   if (workoutIds.length === 0) return new Map();
 
   const result = new Map<string, number>();
+  const sessionSampleLimit = Math.min(workoutIds.length * 20, 500);
 
   const { data: sessions } = await supabase
     .from('workout_sessions')
     .select('workout_id, duration')
     .in('workout_id', workoutIds)
-    .not('duration', 'is', null);
+    .not('duration', 'is', null)
+    .order('date', { ascending: false })
+    .limit(sessionSampleLimit);
 
   const sessionDurations = new Map<string, number[]>();
   for (const session of sessions ?? []) {
