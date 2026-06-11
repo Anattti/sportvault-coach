@@ -37,14 +37,30 @@ export interface ExerciseCategory {
 
 export type WeekViewMode = 'focused' | 'all';
 
+export interface HistorySetPayload {
+  weight: string;
+  reps: string;
+  targetRpe?: string;
+  restTime?: string;
+  isBodyweight?: boolean;
+  targetType?: TargetType;
+}
+
 export interface ApplyExerciseFromHistoryPayload {
   name: string;
-  sets: Array<{
-    weight: string;
-    reps: string;
-    targetRpe?: string;
-    restTime?: string;
-    isBodyweight?: boolean;
-    targetType?: TargetType;
+  sets: Array<HistorySetPayload>;
+}
+
+export interface ApplyWorkoutFromHistoryPayload {
+  exercises: Array<{
+    name: string;
+    notes?: string;
+    sets: Array<HistorySetPayload>;
   }>;
+}
+
+export interface ExerciseNameSuggestion {
+  name: string;
+  sessionCount: number;
+  lastDate: string;
 }

@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { parseISO } from 'date-fns';
-import { CheckCircle2, Trophy } from 'lucide-react';
+import { CheckCircle2, Plus, Trophy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ExerciseSessionBlock } from '@/lib/sessions/exercise-history';
 import { formatCycleWeekLabel } from '@/lib/sessions/format';
 import { formatSessionDateTimeFi } from '@/lib/dates/fi';
 import { ExerciseSessionHistoryData } from '@/lib/sessions/exercise-history';
@@ -15,12 +17,14 @@ interface ExerciseSessionTimelineProps {
   data: ExerciseSessionHistoryData;
   clientId: string;
   embedded?: boolean;
+  onCopySession?: (session: ExerciseSessionBlock) => void;
 }
 
 export default function ExerciseSessionTimeline({
   data,
   clientId,
   embedded = true,
+  onCopySession,
 }: ExerciseSessionTimelineProps) {
   if (data.sessions.length === 0) {
     return (
@@ -56,6 +60,7 @@ export default function ExerciseSessionTimeline({
             )}
           >
             <div className="border-b border-white/8 bg-white/[0.02] px-3 py-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <Link
                   href={`/clients/${clientId}/sessions/${session.sessionId}`}
@@ -85,6 +90,19 @@ export default function ExerciseSessionTimeline({
                     Ennätys
                   </span>
                 )}
+              </div>
+              {onCopySession && (
+                <Button
+                  type="button"
+                  size="sm"
+                  title="Lisää ohjelmaan"
+                  onClick={() => onCopySession(session)}
+                  className="h-7 shrink-0 bg-primary/15 px-2 text-primary hover:bg-primary/25"
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Lisää
+                </Button>
+              )}
               </div>
             </div>
 

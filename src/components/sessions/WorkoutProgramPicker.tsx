@@ -1,7 +1,8 @@
 'use client';
 
 import { parseISO } from 'date-fns';
-import { ChevronRight, Dumbbell } from 'lucide-react';
+import { ChevronRight, Dumbbell, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { formatDateFi } from '@/lib/dates/fi';
 import { WorkoutProgramSummary } from '@/lib/sessions/workout-programs';
 import SessionCycleBadge from '@/components/sessions/SessionCycleBadge';
@@ -12,6 +13,7 @@ interface WorkoutProgramPickerProps {
   selectedWorkoutId: string | null;
   onSelect: (workoutId: string) => void;
   activeWorkoutId?: string;
+  onCopyBlank?: (workoutId: string) => void;
 }
 
 export default function WorkoutProgramPicker({
@@ -19,6 +21,7 @@ export default function WorkoutProgramPicker({
   selectedWorkoutId,
   onSelect,
   activeWorkoutId,
+  onCopyBlank,
 }: WorkoutProgramPickerProps) {
   if (programs.length === 0) {
     return (
@@ -35,14 +38,17 @@ export default function WorkoutProgramPicker({
         const date = parseISO(latest.date);
 
         return (
-          <button
+          <div
             key={program.workoutId}
+            className={cn(
+              'flex w-full items-center gap-1 transition-colors',
+              isSelected ? 'bg-primary/10' : 'hover:bg-white/[0.04]',
+            )}
+          >
+          <button
             type="button"
             onClick={() => onSelect(program.workoutId)}
-            className={cn(
-              'flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors',
-              isSelected ? 'bg-primary/10 hover:bg-primary/15' : 'hover:bg-white/[0.04]',
-            )}
+            className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] ring-1 ring-white/8">
               <Dumbbell className="h-3.5 w-3.5 text-primary" />
@@ -74,6 +80,22 @@ export default function WorkoutProgramPicker({
               )}
             />
           </button>
+          {onCopyBlank && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Kopioi pohja blankkona"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCopyBlank(program.workoutId);
+              }}
+              className="mr-2 h-8 w-8 shrink-0 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
+          </div>
         );
       })}
     </div>

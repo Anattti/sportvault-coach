@@ -16,7 +16,13 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { ExerciseData, SetBlock, WeekViewMode } from '@/lib/types/workout';
+import {
+  ApplyExerciseFromHistoryPayload,
+  ExerciseData,
+  ExerciseNameSuggestion,
+  SetBlock,
+  WeekViewMode,
+} from '@/lib/types/workout';
 import { Button } from '@/components/ui/button';
 import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import ExerciseItem from './ExerciseItem';
@@ -29,6 +35,14 @@ interface Props {
   activeCycleWeek: number;
   weekViewMode: WeekViewMode;
   syncSetsAcrossWeeks: boolean;
+  exerciseSuggestions?: ExerciseNameSuggestion[];
+  onApplySetsToExercise?: (
+    exerciseId: string,
+    sets: ApplyExerciseFromHistoryPayload['sets'],
+  ) => void;
+  onFetchSetsForSuggestion?: (
+    exerciseName: string,
+  ) => Promise<ApplyExerciseFromHistoryPayload['sets'] | null>;
 }
 
 function buildDefaultCollapsedWeeks(cycleWeeks: number, activeCycleWeek: number): Set<number> {
@@ -47,6 +61,9 @@ export default function ExerciseList({
   activeCycleWeek,
   weekViewMode,
   syncSetsAcrossWeeks,
+  exerciseSuggestions = [],
+  onApplySetsToExercise,
+  onFetchSetsForSuggestion,
 }: Props) {
   const [collapsedWeeks, setCollapsedWeeks] = useState<Set<number>>(() =>
     buildDefaultCollapsedWeeks(cycleWeeks, activeCycleWeek),
@@ -255,6 +272,9 @@ export default function ExerciseList({
                 updateSetBlock={updateSetBlock}
                 removeSetBlock={removeSetBlock}
                 addSetBlock={addSetBlock}
+                exerciseSuggestions={exerciseSuggestions}
+                onApplySetsToExercise={onApplySetsToExercise}
+                onFetchSetsForSuggestion={onFetchSetsForSuggestion}
               />
             ))
           )}

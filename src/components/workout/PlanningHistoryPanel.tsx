@@ -16,7 +16,9 @@ import WorkoutHistoryTimeline from '@/components/sessions/WorkoutHistoryTimeline
 import ExercisePicker from '@/components/sessions/ExercisePicker';
 import ExerciseSessionTimeline from '@/components/sessions/ExerciseSessionTimeline';
 import { SessionSummary, WorkoutHistoryData } from '@/types';
-import { ApplyExerciseFromHistoryPayload } from '@/lib/types/workout';
+import { ApplyExerciseFromHistoryPayload, ApplyWorkoutFromHistoryPayload } from '@/lib/types/workout';
+import { fetchWorkoutBlankStructure } from '@/lib/workouts/exercise-suggestions';
+import { buildExercisePayloadFromSession, buildWorkoutPayloadFromHistorySession } from '@/lib/workouts/history-payload';
 import { formatDateFi } from '@/lib/dates/fi';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -39,6 +41,7 @@ interface PlanningHistoryPanelProps {
   navState?: PlanningHistoryNavState;
   onNavStateChange?: (state: PlanningHistoryNavState) => void;
   onApplyFromHistory?: (payload: ApplyExerciseFromHistoryPayload) => void;
+  onApplyWorkoutFromHistory?: (payload: ApplyWorkoutFromHistoryPayload) => void;
   className?: string;
 }
 
@@ -59,6 +62,7 @@ export default function PlanningHistoryPanel({
   navState,
   onNavStateChange,
   onApplyFromHistory,
+  onApplyWorkoutFromHistory,
   className,
 }: PlanningHistoryPanelProps) {
   const supabase = useMemo(() => createClient(), []);
@@ -264,6 +268,19 @@ export default function PlanningHistoryPanel({
   }, [selectedExerciseName, clientId, supabase]);
 
   const selectedProgram = programs.find((program) => program.workoutId === resolvedWorkoutId);
+  const handleCopyBlankWorkout = async (targetWorkoutId: string) => {
+    if (!onApplyWorkoutFromHistory) return;
+    const payload = await fetchWorkoutBlankStructure(supabase, targetWorkoutId);
+    if (payload) onApplyWorkoutFromHistory(payload);
+  };
+
+  const handleCopyBlankExercise = (name: string) => {
+    onApplyFromHistory?.({
+      name,
+      sets: [{ reps: '', weight: '', restTime: '60' }],
+    });
+  };
+
   const selectedTitle =
     selectedProgram?.workoutName ??
     (history?.meta.workoutId === resolvedWorkoutId ? history.meta.programName : null);
@@ -321,6 +338,11 @@ export default function PlanningHistoryPanel({
               selectedWorkoutId={resolvedWorkoutId}
               onSelect={(id) => updateNavState({ selectedWorkoutId: id })}
               activeWorkoutId={workoutId}
+              onCopyBlank={
+                onApplyWorkoutFromHistory
+                  ? (id) => void handleCopyBlankWorkout(id)
+                  : undefined
+              }
             />
           </section>
 
@@ -355,6 +377,11 @@ export default function PlanningHistoryPanel({
                   data={history}
                   clientId={clientId}
                   variant="embedded"
+                  onCopySession={onApplyWorkoutFromHistory}
+                  buildSessionPayload={(sessionId) =>
+                    buildWorkoutPayloadFromHistorySession(history, sessionId)
+                  }
+                  onCopyExercise={onApplyFromHistory}
                 />
               )}
 
@@ -378,6 +405,7 @@ export default function PlanningHistoryPanel({
               selectedExerciseName={selectedExerciseName}
               onSelect={(name) => updateNavState({ selectedExerciseName: name })}
               suggestedNames={mergedSuggestedNames}
+              onCopyBlank={onApplyFromHistory ? handleCopyBlankExercise : undefined}
             />
           )}
 
@@ -433,6 +461,17 @@ export default function PlanningHistoryPanel({
                   data={exerciseHistory}
                   clientId={clientId}
                   embedded
+                  onCopySession={
+                    onApplyFromHistory
+                      ? (session) =>
+                          onApplyFromHistory(
+                            buildExercisePayloadFromSession(
+                              exerciseHistory.exerciseName,
+                              session,
+                            ),
+                          )
+                      : undefined
+                  }
                 />
               )}
             </section>

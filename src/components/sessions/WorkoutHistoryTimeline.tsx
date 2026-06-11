@@ -3,7 +3,21 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { parseISO } from 'date-fns';
-import { BatteryLow, Dumbbell, MessageSquareText, TrendingDown, TrendingUp, Trophy } from 'lucide-react';
+import {
+  BatteryLow,
+  Dumbbell,
+  MessageSquareText,
+  Plus,
+  TrendingDown,
+  TrendingUp,
+  Trophy,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  buildBlankExercisePayloadFromHistory,
+  buildExercisePayloadFromWorkoutHistorySession,
+} from '@/lib/workouts/history-payload';
+import { ApplyExerciseFromHistoryPayload, ApplyWorkoutFromHistoryPayload } from '@/lib/types/workout';
 import { formatCycleWeekLabel } from '@/lib/sessions/format';
 import { formatSessionDateTimeFi } from '@/lib/dates/fi';
 import { primaryActiveClassName } from '@/config/navigation';
@@ -17,6 +31,9 @@ interface WorkoutHistoryTimelineProps {
   clientId: string;
   variant?: 'full' | 'embedded';
   onSessionSelect?: (sessionId: string) => void;
+  onCopySession?: (payload: ApplyWorkoutFromHistoryPayload) => void;
+  buildSessionPayload?: (sessionId: string) => ApplyWorkoutFromHistoryPayload;
+  onCopyExercise?: (payload: ApplyExerciseFromHistoryPayload) => void;
 }
 
 type ExerciseFilter = 'all' | 'program';
@@ -205,6 +222,7 @@ function ExerciseHistoryTable({
   sessionNotesById,
   embedded,
   onSessionSelect,
+  onCopyExercise,
 }: {
   exercise: WorkoutExerciseHistory;
   clientId: string;
@@ -213,6 +231,7 @@ function ExerciseHistoryTable({
   sessionNotesById: WorkoutHistoryData['sessionNotesById'];
   embedded: boolean;
   onSessionSelect?: (sessionId: string) => void;
+  onCopyExercise?: (payload: ApplyExerciseFromHistoryPayload) => void;
 }) {
   const sessionWeightChanges = useMemo(
     () => buildSessionWeightChangePercent(exercise.rows),
@@ -264,6 +283,18 @@ function ExerciseHistoryTable({
             </p>
           </div>
         </div>
+        {onCopyExercise && (
+          <Button
+            type="button"
+            size="sm"
+            title="Lisää blankkona"
+            onClick={() => onCopyExercise(buildBlankExercisePayloadFromHistory(exercise))}
+            className="h-7 shrink-0 bg-primary/15 px-2 text-primary hover:bg-primary/25"
+          >
+            <Plus className="mr-1 h-3.5 w-3.5" />
+            Lisää
+          </Button>
+        )}
       </div>
 
       <div className="overflow-x-auto">
@@ -320,7 +351,7 @@ function ExerciseHistoryTable({
                   </td>
                   <td className={embedded ? 'px-2 py-2' : 'px-3 py-3'}>
                     {isSessionStart ? (
-                      <span className="inline-flex flex-wrap items-center">
+                      <span className="inline-flex flex-wrap items-center gap-1">
                         <SessionDateLink
                           sessionId={row.sessionId}
                           clientId={clientId}
@@ -333,6 +364,24 @@ function ExerciseHistoryTable({
                           {...(sessionNotesById[row.sessionId] ?? {})}
                         />
                         <WeightChangeChip percent={weightChange} />
+                        {onCopyExercise && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            title="Lisää ohjelmaan"
+                            onClick={() => {
+                              const payload = buildExercisePayloadFromWorkoutHistorySession(
+                                exercise,
+                                row.sessionId,
+                              );
+                              if (payload) onCopyExercise(payload);
+                            }}
+                            className="h-6 shrink-0 bg-primary/15 px-1.5 text-[10px] text-primary hover:bg-primary/25"
+                          >
+                            <Plus className="mr-0.5 h-3 w-3" />
+                            Lisää
+                          </Button>
+                        )}
                       </span>
                     ) : (
                       <span className="text-muted-foreground/20" aria-hidden="true">
@@ -409,6 +458,9 @@ export default function WorkoutHistoryTimeline({
   clientId,
   variant = 'full',
   onSessionSelect,
+  onCopySession,
+  buildSessionPayload,
+  onCopyExercise,
 }: WorkoutHistoryTimelineProps) {
   const embedded = variant === 'embedded';
   const { meta, exercises, sessionNotesById } = data;
@@ -430,6 +482,21 @@ export default function WorkoutHistoryTimeline({
     () => exercises.filter((exercise) => exercise.isProgramExercise).length,
     [exercises],
   );
+
+  const sessionList = useMemo(() => {
+    const seen = new Set<string>();
+    const sessions: Array<{ sessionId: string; date: string }> = [];
+    for (const exercise of exercises) {
+      for (const row of exercise.rows) {
+        if (seen.has(row.sessionId)) continue;
+        seen.add(row.sessionId);
+        sessions.push({ sessionId: row.sessionId, date: row.date });
+      }
+    }
+    return sessions.sort(
+      (a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime(),
+    );
+  }, [exercises]);
 
   if (meta.totalSessions === 0) {
     return (
@@ -467,6 +534,36 @@ export default function WorkoutHistoryTimeline({
 
   return (
     <div className={embedded ? 'space-y-3' : 'space-y-6'}>
+      {onCopySession && buildSessionPayload && sessionList.length > 0 && (
+        <div className="space-y-1.5 rounded-xl bg-white/[0.02] p-2 ring-1 ring-white/8">
+          <p className="px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Lisää sessio ohjelmaan
+          </p>
+          <div className="max-h-36 space-y-1 overflow-y-auto">
+            {sessionList.map((session) => (
+              <div
+                key={session.sessionId}
+                className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-white/[0.04]"
+              >
+                <span className="truncate text-xs font-medium text-foreground">
+                  {formatSessionDateTimeFi(parseISO(session.date))}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  title="Lisää ohjelmaan"
+                  onClick={() => onCopySession(buildSessionPayload(session.sessionId))}
+                  className="h-7 shrink-0 bg-primary/15 px-2 text-primary hover:bg-primary/25"
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Lisää
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className={cn('px-1 text-muted-foreground', embedded ? 'text-xs' : 'text-sm')}>
           {filteredExercises.length}{' '}
@@ -524,6 +621,7 @@ export default function WorkoutHistoryTimeline({
             sessionNotesById={sessionNotesById}
             embedded={embedded}
             onSessionSelect={onSessionSelect}
+            onCopyExercise={onCopyExercise}
           />
         ))
       )}

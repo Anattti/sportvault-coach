@@ -12,11 +12,19 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   ApplyExerciseFromHistoryPayload,
+  ApplyWorkoutFromHistoryPayload,
   ExerciseData,
+  ExerciseNameSuggestion,
   SetBlock,
   TargetType,
   WeekViewMode,
 } from '@/lib/types/workout';
+import { fetchClientExerciseOptions } from '@/lib/sessions/exercise-history';
+import {
+  fetchCoachExerciseNameOptions,
+  fetchLatestPlannedSets,
+} from '@/lib/workouts/exercise-suggestions';
+import { buildSetBlocksForExercise } from '@/lib/workouts/set-blocks';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Save, Loader2, Plus } from 'lucide-react';
 import ProgramSettingsStrip from '@/components/workout/ProgramSettingsStrip';
@@ -41,6 +49,7 @@ export interface WorkoutBuilderHandle {
   save: () => void;
   addExercise: () => void;
   applyExerciseFromHistory: (payload: ApplyExerciseFromHistoryPayload) => void;
+  applyWorkoutFromHistory: (payload: ApplyWorkoutFromHistoryPayload) => void;
   getExerciseNames: () => string[];
 }
 
@@ -82,6 +91,7 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(!!workoutId);
+    const [exerciseSuggestions, setExerciseSuggestions] = useState<ExerciseNameSuggestion[]>([]);
 
     useEffect(() => {
       onLoadingChange?.(loading);
@@ -177,6 +187,56 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
       fetchWorkout();
     }, [workoutId, supabase, toast]);
 
+    useEffect(() => {
+      let cancelled = false;
+
+      const loadSuggestions = async () => {
+        const { data: authData } = await supabase.auth.getUser();
+        if (!authData.user || cancelled) return;
+
+        const coachOptions = await fetchCoachExerciseNameOptions(supabase, authData.user.id);
+        let merged = coachOptions;
+
+        if (mode === 'client' && targetUserId) {
+          const clientOptions = await fetchClientExerciseOptions(supabase, targetUserId);
+          const byKey = new Map<string, ExerciseNameSuggestion>();
+
+          for (const opt of [...clientOptions, ...coachOptions]) {
+            const key = opt.name.trim().toLowerCase();
+            const existing = byKey.get(key);
+            if (!existing) {
+              byKey.set(key, opt);
+            } else if (
+              new Date(opt.lastDate).getTime() > new Date(existing.lastDate).getTime()
+            ) {
+              byKey.set(key, {
+                name: opt.name,
+                sessionCount: existing.sessionCount + opt.sessionCount,
+                lastDate: opt.lastDate,
+              });
+            } else {
+              byKey.set(key, {
+                ...existing,
+                sessionCount: existing.sessionCount + opt.sessionCount,
+              });
+            }
+          }
+
+          merged = [...byKey.values()].sort(
+            (a, b) => new Date(b.lastDate).getTime() - new Date(a.lastDate).getTime(),
+          );
+        }
+
+        if (!cancelled) setExerciseSuggestions(merged);
+      };
+
+      void loadSuggestions();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [mode, targetUserId, supabase]);
+
     const updateCycleWeeks = useCallback(
       (newWeeks: number) => {
         setExercises((prev) =>
@@ -243,38 +303,7 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
 
     const applyExerciseFromHistory = useCallback(
       (payload: ApplyExerciseFromHistoryPayload) => {
-        const buildSetsForWeek = (week: number, usePayload: boolean): SetBlock[] => {
-          if (usePayload && payload.sets.length > 0) {
-            return payload.sets.map((s) => ({
-              id: Math.random().toString(),
-              reps: s.reps,
-              weight: s.weight,
-              restTime: s.restTime || '60',
-              targetRpe: s.targetRpe || '',
-              targetType: s.targetType || 'reps',
-              isBodyweight: s.isBodyweight || false,
-              cycleWeek: week,
-              notes: '',
-            }));
-          }
-          return [
-            {
-              id: Math.random().toString(),
-              reps: '',
-              weight: '',
-              restTime: '60',
-              targetType: 'reps' as TargetType,
-              isBodyweight: false,
-              cycleWeek: week,
-              notes: '',
-            },
-          ];
-        };
-
-        const allSets: SetBlock[] = [];
-        for (let w = 1; w <= cycleWeeks; w++) {
-          allSets.push(...buildSetsForWeek(w, w === activeCycleWeek));
-        }
+        const allSets = buildSetBlocksForExercise(payload.sets, cycleWeeks, activeCycleWeek);
 
         setExercises((prev) => [
           ...prev,
@@ -290,6 +319,76 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
         toast(`Liike "${payload.name}" lisätty ohjelmaan`, 'success');
       },
       [cycleWeeks, activeCycleWeek, toast],
+    );
+
+    const applyWorkoutFromHistory = useCallback(
+      (payload: ApplyWorkoutFromHistoryPayload) => {
+        const newExercises: ExerciseData[] = payload.exercises.map((ex) => ({
+          id: Math.random().toString(),
+          name: ex.name,
+          category: '',
+          notes: ex.notes || '',
+          setBlocks: buildSetBlocksForExercise(ex.sets, cycleWeeks, activeCycleWeek),
+        }));
+
+        setExercises((prev) => [...prev, ...newExercises]);
+        toast(
+          newExercises.length === 1
+            ? `Liike "${newExercises[0].name}" lisätty ohjelmaan`
+            : `${newExercises.length} liikettä lisätty ohjelmaan`,
+          'success',
+        );
+      },
+      [cycleWeeks, activeCycleWeek, toast],
+    );
+
+    const applySetsToExercise = useCallback(
+      (exerciseId: string, sets: ApplyExerciseFromHistoryPayload['sets']) => {
+        const newBlocks = buildSetBlocksForExercise(sets, cycleWeeks, activeCycleWeek);
+
+        setExercises((prev) =>
+          prev.map((ex) => {
+            if (ex.id !== exerciseId) return ex;
+
+            const otherWeekBlocks = ex.setBlocks.filter(
+              (b) => (b.cycleWeek ?? 1) !== activeCycleWeek,
+            );
+            const activeWeekBlocks = newBlocks.filter(
+              (b) => (b.cycleWeek ?? 1) === activeCycleWeek,
+            );
+
+            return { ...ex, setBlocks: [...otherWeekBlocks, ...activeWeekBlocks] };
+          }),
+        );
+      },
+      [cycleWeeks, activeCycleWeek],
+    );
+
+    const fetchSetsForSuggestion = useCallback(
+      async (exerciseName: string): Promise<ApplyExerciseFromHistoryPayload['sets'] | null> => {
+        const { data: authData } = await supabase.auth.getUser();
+        if (!authData.user) return null;
+
+        if (mode === 'client' && targetUserId) {
+          const { fetchExerciseSessionHistory } = await import('@/lib/sessions/exercise-history');
+          const history = await fetchExerciseSessionHistory(
+            supabase,
+            targetUserId,
+            authData.user.id,
+            exerciseName,
+          );
+          const latest = history?.sessions[0];
+          if (!latest) return null;
+          return latest.sets.map((s) => ({
+            weight: s.weightUsed?.toString() || '',
+            reps: s.repsCompleted?.toString() || '',
+            targetRpe: s.rpe?.toString() || '',
+          }));
+        }
+
+        return fetchLatestPlannedSets(supabase, authData.user.id, exerciseName);
+      },
+      [mode, targetUserId, supabase],
     );
 
     const copyWeek = useCallback((fromWeek: number, toWeek: number) => {
@@ -441,10 +540,11 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
         save: handleSave,
         addExercise: addManualExercise,
         applyExerciseFromHistory,
+        applyWorkoutFromHistory,
         getExerciseNames: () =>
           exercises.map((ex) => ex.name.trim()).filter(Boolean),
       }),
-      [handleSave, addManualExercise, applyExerciseFromHistory, exercises],
+      [handleSave, addManualExercise, applyExerciseFromHistory, applyWorkoutFromHistory, exercises],
     );
 
     if (initialLoading) {
@@ -503,6 +603,9 @@ const WorkoutBuilder = forwardRef<WorkoutBuilderHandle, WorkoutBuilderProps>(
           activeCycleWeek={activeCycleWeek}
           weekViewMode={weekViewMode}
           syncSetsAcrossWeeks={syncSetsAcrossWeeks}
+          exerciseSuggestions={exerciseSuggestions}
+          onApplySetsToExercise={applySetsToExercise}
+          onFetchSetsForSuggestion={fetchSetsForSuggestion}
         />
 
         <Button

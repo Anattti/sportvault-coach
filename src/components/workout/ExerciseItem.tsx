@@ -2,10 +2,16 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ExerciseData, SetBlock, WeekViewMode } from '@/lib/types/workout';
+import {
+  ApplyExerciseFromHistoryPayload,
+  ExerciseData,
+  ExerciseNameSuggestion,
+  SetBlock,
+  WeekViewMode,
+} from '@/lib/types/workout';
 import { useState } from 'react';
-import { GripVertical, Plus, Trash2, MessageSquare, BatteryLow, ChevronDown } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { GripVertical, Plus, Trash2, MessageSquare, BatteryLow, ChevronDown, Loader2 } from 'lucide-react';
+import ExerciseNameAutocomplete from '@/components/workout/ExerciseNameAutocomplete';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -25,6 +31,14 @@ interface Props {
   updateSetBlock: <K extends keyof SetBlock>(exerciseId: string, blockId: string, field: K, value: SetBlock[K]) => void;
   removeSetBlock: (exerciseId: string, blockId: string) => void;
   addSetBlock: (exerciseId: string, sourceCycleWeek?: number) => void;
+  exerciseSuggestions?: ExerciseNameSuggestion[];
+  onApplySetsToExercise?: (
+    exerciseId: string,
+    sets: ApplyExerciseFromHistoryPayload['sets'],
+  ) => void;
+  onFetchSetsForSuggestion?: (
+    exerciseName: string,
+  ) => Promise<ApplyExerciseFromHistoryPayload['sets'] | null>;
 }
 
 export default function ExerciseItem({
@@ -40,6 +54,9 @@ export default function ExerciseItem({
   updateSetBlock,
   removeSetBlock,
   addSetBlock,
+  exerciseSuggestions = [],
+  onApplySetsToExercise,
+  onFetchSetsForSuggestion,
 }: Props) {
   const {
     attributes,
@@ -51,6 +68,9 @@ export default function ExerciseItem({
   } = useSortable({ id: exercise.id });
 
   const [notesVisible, setNotesVisible] = useState(Boolean(exercise.notes?.trim()));
+  const [pendingFillName, setPendingFillName] = useState<string | null>(null);
+  const [fillPreview, setFillPreview] = useState<string | null>(null);
+  const [fillLoading, setFillLoading] = useState(false);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -123,12 +143,65 @@ export default function ExerciseItem({
           </div>
 
           <div className="min-w-0 flex-1">
-            <Input
+            <ExerciseNameAutocomplete
               value={exercise.name}
-              onChange={(e) => updateExercise(exercise.id, 'name', e.target.value)}
-              placeholder="Liikkeen nimi"
+              onChange={(name) => {
+                updateExercise(exercise.id, 'name', name);
+                if (pendingFillName && name.trim().toLowerCase() !== pendingFillName.toLowerCase()) {
+                  setPendingFillName(null);
+                  setFillPreview(null);
+                }
+              }}
+              onSuggestionSelected={async (name) => {
+                if (!onFetchSetsForSuggestion || !onApplySetsToExercise) return;
+                const sets = await onFetchSetsForSuggestion(name);
+                if (!sets || sets.length === 0) return;
+
+                const preview = sets
+                  .slice(0, 3)
+                  .map((s) => {
+                    const w = s.weight ? `${s.weight} kg` : 'BW';
+                    const r = s.reps || '—';
+                    return `${w}×${r}`;
+                  })
+                  .join(', ');
+
+                setPendingFillName(name);
+                setFillPreview(
+                  sets.length > 3 ? `${preview} +${sets.length - 3}` : preview,
+                );
+              }}
+              suggestions={exerciseSuggestions}
               className="h-auto rounded-none border-0 bg-transparent px-0 text-lg font-bold focus-visible:text-primary focus-visible:ring-0"
             />
+            {pendingFillName && fillPreview && onApplySetsToExercise && (
+              <button
+                type="button"
+                disabled={fillLoading}
+                onClick={async () => {
+                  if (!onFetchSetsForSuggestion) return;
+                  setFillLoading(true);
+                  try {
+                    const sets = await onFetchSetsForSuggestion(pendingFillName);
+                    if (sets && sets.length > 0) {
+                      onApplySetsToExercise(exercise.id, sets);
+                      setPendingFillName(null);
+                      setFillPreview(null);
+                    }
+                  } finally {
+                    setFillLoading(false);
+                  }
+                }}
+                className="mt-1 inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-0.5 text-left text-xs text-primary transition-colors hover:bg-primary/20"
+              >
+                {fillLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Plus className="h-3 w-3" />
+                )}
+                Täytä viimeisimmät sarjat ({fillPreview})
+              </button>
+            )}
             {hasNotes && !notesVisible && (
               <button
                 type="button"

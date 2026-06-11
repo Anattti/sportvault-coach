@@ -12,7 +12,11 @@ import PlanningHistoryPanel, {
 } from '@/components/workout/PlanningHistoryPanel';
 import ResizableHistoryAside from '@/components/workout/ResizableHistoryAside';
 import { groupSessionsByWorkout } from '@/lib/sessions/workout-programs';
-import { ApplyExerciseFromHistoryPayload, ExerciseData } from '@/lib/types/workout';
+import {
+  ApplyExerciseFromHistoryPayload,
+  ApplyWorkoutFromHistoryPayload,
+  ExerciseData,
+} from '@/lib/types/workout';
 import { SessionSummary, WorkoutHistoryData } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -72,8 +76,9 @@ export default function WorkoutPlanner({
   const savedHistoryScrollTopRef = useRef(0);
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [historyPinned, setHistoryPinned] = useState(readHistoryPinnedPreference);
-  const [isLargeScreen, setIsLargeScreen] = useState(readIsLargeScreen);
+  const [historyPinned, setHistoryPinned] = useState(true);
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
+  const [layoutReady, setLayoutReady] = useState(false);
   const [suggestedExerciseNames, setSuggestedExerciseNames] = useState<string[]>([]);
 
   const programs = useMemo(
@@ -96,13 +101,13 @@ export default function WorkoutPlanner({
   }, []);
 
   useEffect(() => {
+    setHistoryPinned(readHistoryPinnedPreference());
+    setIsLargeScreen(readIsLargeScreen());
+    setLayoutReady(true);
+
     const media = window.matchMedia('(min-width: 1024px)');
+    const sync = () => setIsLargeScreen(media.matches);
 
-    const sync = () => {
-      setIsLargeScreen(media.matches);
-    };
-
-    sync();
     media.addEventListener('change', sync);
     return () => media.removeEventListener('change', sync);
   }, []);
@@ -122,6 +127,11 @@ export default function WorkoutPlanner({
     setHistoryOpen(false);
   };
 
+  const handleApplyWorkoutFromHistory = (payload: ApplyWorkoutFromHistoryPayload) => {
+    builderRef.current?.applyWorkoutFromHistory(payload);
+    setHistoryOpen(false);
+  };
+
   const handleHistoryOpenChange = useCallback((open: boolean) => {
     if (!open && historyScrollRef.current) {
       savedHistoryScrollTopRef.current = historyScrollRef.current.scrollTop;
@@ -136,7 +146,7 @@ export default function WorkoutPlanner({
     }
   }, []);
 
-  const showPinnedHistory = historyPinned && isLargeScreen;
+  const showPinnedHistory = layoutReady && historyPinned && isLargeScreen;
 
   const historyPanel = (
     <PlanningHistoryPanel
@@ -148,6 +158,7 @@ export default function WorkoutPlanner({
       navState={historyNavState}
       onNavStateChange={setHistoryNavState}
       onApplyFromHistory={handleApplyFromHistory}
+      onApplyWorkoutFromHistory={handleApplyWorkoutFromHistory}
     />
   );
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { GripVertical, History, PinOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,11 @@ interface ResizableHistoryAsideProps {
 }
 
 export default function ResizableHistoryAside({ onUnpin, children }: ResizableHistoryAsideProps) {
-  const [width, setWidth] = useState(readStoredWidth);
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+
+  useEffect(() => {
+    setWidth(readStoredWidth());
+  }, []);
   const [isResizing, setIsResizing] = useState(false);
   const widthRef = useRef(width);
 

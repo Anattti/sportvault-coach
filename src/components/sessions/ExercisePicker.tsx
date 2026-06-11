@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { parseISO } from 'date-fns';
-import { ChevronRight, Dumbbell, Search } from 'lucide-react';
+import { ChevronRight, Dumbbell, Plus, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { formatDateFi } from '@/lib/dates/fi';
 import { ExerciseOption } from '@/lib/sessions/exercise-history';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ interface ExercisePickerProps {
   selectedExerciseName: string | null;
   onSelect: (exerciseName: string) => void;
   suggestedNames?: string[];
+  onCopyBlank?: (exerciseName: string) => void;
 }
 
 export default function ExercisePicker({
@@ -20,6 +22,7 @@ export default function ExercisePicker({
   selectedExerciseName,
   onSelect,
   suggestedNames = [],
+  onCopyBlank,
 }: ExercisePickerProps) {
   const [query, setQuery] = useState('');
 
@@ -71,14 +74,17 @@ export default function ExercisePicker({
             );
 
             return (
-              <button
+              <div
                 key={exercise.name}
+                className={cn(
+                  'flex w-full items-center gap-1 transition-colors',
+                  isSelected ? 'bg-primary/10' : 'hover:bg-white/[0.04]',
+                )}
+              >
+              <button
                 type="button"
                 onClick={() => onSelect(exercise.name)}
-                className={cn(
-                  'flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors',
-                  isSelected ? 'bg-primary/10 hover:bg-primary/15' : 'hover:bg-white/[0.04]',
-                )}
+                className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left"
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] ring-1 ring-white/8">
                   <Dumbbell className="h-3.5 w-3.5 text-primary" />
@@ -105,6 +111,22 @@ export default function ExercisePicker({
                   )}
                 />
               </button>
+              {onCopyBlank && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  title="Lisää blankkona"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCopyBlank(exercise.name);
+                  }}
+                  className="mr-2 h-8 w-8 shrink-0 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              )}
+              </div>
             );
           })
         )}
